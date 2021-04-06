@@ -29,6 +29,7 @@ public:
 	std::shared_ptr<PriceAPI> api;
 	Item getItem(string id);
 
+	void logPrice(string id, CVarWrapper cvar);
 	// Inherited via PluginWindow
 	/*
 

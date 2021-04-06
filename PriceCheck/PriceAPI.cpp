@@ -56,6 +56,76 @@ void PriceAPI::LoadData()
 		});
 	t.detach();
 }
+/// <summary>
+/// Query singular item information from the backend.
+/// </summary>
+/// <param name="id"></param>
+void PriceAPI::FetchItem(string id)
+{
+	_gw->Toast("PriceAPI log", "getting item price. Check console.");
+	thread t([this, id]() {
+		string url = "/item/" + id;
+		cli.set_follow_location(true);
+		auto res = cli.Get(url.c_str());
+		if (res && res->status == 200)
+		{
+			json j = json::parse(res->body);
+			try
+			{
+				auto data = j.get<Item>();
+				if (data.isError) _cvar->log("Item (" + id + ") not found. No price info on this item, if seems odd - contact developer!");
+				else 
+				{
+					_cvar->log("Time: " + data.last_refresh);
+					_cvar->log("Going raw: " + res->body);
+					OnFetchItem(data);
+				}
+			}
+			catch (const std::exception& e)
+			{
+				_cvar->log(e.what());
+			}
+		}
+		else _cvar->log("Brrsz. Its not 200 today :(");
+	});
+	t.detach();
+}
+
+/// <summary>
+/// Find item price information.
+/// </summary>
+/// <param name="id">Item ID</param>
+/// <returns></returns>
+Item PriceAPI::FindItem(string id)
+{
+	auto it = _priceData.find(id);
+	if (it != _priceData.end())
+	{
+		_cvar->log("Found in item(" + it->second.id + ") in cache.");
+		return it->second;
+	}
+	else
+	{
+		_cvar->log("Item (" + id + ") not found. Sending req...");
+		_priceData[id] = CreateItem(id); // Insert?
+		FetchItem(id);
+	}
+	return Item();
+}
+
+/// <summary>
+/// Create an template for an item. It will be filled with data when query is fulfilled.
+/// </summary>
+/// <param name="id"></param>
+/// <returns></returns>
+Item PriceAPI::CreateItem(string id)
+{
+	for (auto& d : priceData)
+	{
+		if (d.second.id == id) return d.second;
+	}
+	return Item();
+}
 
 /*
 * =====================
@@ -69,6 +139,32 @@ void PriceAPI::LoadData()
 void PriceAPI::OnLoadData(APIData res)
 {
 	priceData = res.data;
+}
+
+/// <summary>
+/// Callback when item data is received from the backend. Update local copy with updated info.
+/// </summary>
+/// <param name="item">Item data</param>
+void PriceAPI::OnFetchItem(Item item)
+{
+	_cvar->log("Updating item(" + item.id + ")");
+	// Dbg log
+	for (auto e : item.data)
+	{
+		_cvar->log("Data:" + e.first + " " + std::to_string(e.second.min) + " " + std::to_string(e.second.max));
+	}
+
+	auto it = _priceData.find(item.id);
+	if (it != _priceData.end())
+	{
+		// Item found on cache, update it.
+		_priceData[item.id] = item;
+	}
+	else
+	{
+		// Item not found in cache (rare?), add it.
+		_priceData.emplace(item.id, item); // Is there an possibility on duplicates?
+	}
 }
 
 

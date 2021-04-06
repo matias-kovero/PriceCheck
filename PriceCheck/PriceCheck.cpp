@@ -23,6 +23,9 @@ void PriceCheck::onLoad()
 		cvarManager->log("Hello notifier!");
 	}, "", 0);
 
+	cvarManager->registerCvar("check_price", "6", "Debug item price", true, true, 0, true, 9999, false)
+		.addOnValueChanged(std::bind(&PriceCheck::logPrice, this, std::placeholders::_1, std::placeholders::_2));
+
 	//auto cvar = cvarManager->registerCvar("template_cvar", "hello-cvar", "just a example of a cvar");
 	//auto cvar2 = cvarManager->registerCvar("template_cvar2", "0", "just a example of a cvar with more settings", true, true, -10, true, 10 );
 
@@ -64,5 +67,19 @@ Item PriceCheck::getItem(string id)
 		return it->second;
 	}
 	// Fallback, item was not found in our initially loaded data. Maybe user had connection issues.
-	return api->FetchItem(id);
+	return api->FindItem(id);
+}
+
+void PriceCheck::logPrice(string old, CVarWrapper cvar)
+{
+	if (old.empty() == false && cvar.getStringValue().empty() == false)
+	{
+		string id = cvar.getStringValue();
+		auto item = getItem(id);
+
+		for (auto e : item.data) 
+		{
+			cvarManager->log("[Info] " + e.first + ": " + std::to_string(e.second.min) + " - " + std::to_string(e.second.max));
+		}
+	}
 }

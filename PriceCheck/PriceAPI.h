@@ -72,28 +72,20 @@ class PriceAPI
 {
 public:
 	PriceAPI(std::shared_ptr<CVarManagerWrapper> _cvar, std::shared_ptr<GameWrapper> _gw);
-
-	void Test();
-
-	// Load all data from backend.
-	//void GetAllPriceData();
-	//std::map<string, Item> allPriceData;
-
-	// Load all data from backend.
-	void LoadData();
 	std::map<string, Item> priceData;
 
-	// Trigger an query to specific item.
-	Item FetchItem(string id);
+	void Test();
+	void LoadData();
 
-	// Returns give id price info.
-	// Item GetCachedPriceData(string id);
+	Item FindItem(string id);
 
 private:
 	std::map<string, Item> _priceData;
 	std::shared_ptr<CVarManagerWrapper> _cvar;
 	std::shared_ptr<GameWrapper> _gw;
 	httplib::SSLClient cli;
+
+	Item CreateItem(string id);
 
 	Item GetTemporaryPriceData(string id);
 
@@ -104,8 +96,12 @@ private:
 	void OnPriceData(Item data);
 
 	// Request data from backend
+	void FetchItem(string id);
+
 	void GetItemPrice(string id);
 
 	// When initial data is loaded
 	void OnLoadData(APIData data);
+	// When backend returns item data.
+	void OnFetchItem(Item item);
 };
