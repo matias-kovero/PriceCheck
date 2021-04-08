@@ -98,6 +98,7 @@ public:
 	void LoadData();
 
 	Item FindItem(string id);
+	Item FindItem(int id);
 
 private:
 	std::map<string, Item> _priceData;

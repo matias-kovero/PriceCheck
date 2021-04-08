@@ -5,12 +5,11 @@
 
 PaintPrice TradeItem::GetPrice()
 {
-  priceInfo = Info();
-  priceInfo = this->updateItemInfo();
-  Item price = getItem();
+  itemInfo = this->updateItemInfo();
+  Item price = _globalPriceAPI->FindItem(this->GetProductID());
 
   // Update paint field, currently used only for logging.
-  paint = _globalPriceAPI->paintNameList[priceInfo.paintID];
+  paint = _globalPriceAPI->paintNameList[itemInfo.paintID];
 
   auto p = price.data[paint];
   
@@ -29,29 +28,29 @@ Info TradeItem::updateItemInfo()
     {
       // Why all items don't have this?
       auto pa = ProductAttribute_QualityWrapper(attributes.Get(i).memory_address);
-      priceInfo.quality = pa.GetQuality();
+      itemInfo.quality = pa.GetQuality();
     }
     if (attributes.Get(i).GetAttributeType() == "ProductAttribute_Painted_TA") // Painted
     {
       auto pa = ProductAttribute_PaintedWrapper(attributes.Get(i).memory_address);
-      priceInfo.paintID = pa.GetPaintID();
+      itemInfo.paintID = pa.GetPaintID();
     }
     if (attributes.Get(i).GetAttributeType() == "ProductAttribute_Certified_TA") // Certified
     {
       auto pa = ProductAttribute_CertifiedWrapper(attributes.Get(i).memory_address);
       auto cert = pa.GetRankLabel().ToString();
-      priceInfo.certified = cert;
+      itemInfo.certified = cert;
     }
     if (attributes.Get(i).GetAttributeType() == "ProductAttribute_SpecialEdition_TA") // Is this Obsolete now?
     {
       auto pa = ProductAttribute_SpecialEditionWrapper(attributes.Get(i).memory_address);
       auto label = _globalSpecialEditionManager->GetSpecialEditionName(pa.GetEditionID());
       label.replace(0, 8, ""); // Removing "Edition_" from label.
-      priceInfo.editionID = pa.GetEditionID();
-      priceInfo.specialEdition = label;
+      itemInfo.editionID = pa.GetEditionID();
+      itemInfo.specialEdition = label;
     }
   }
-  return priceInfo;
+  return itemInfo;
 }
 
 Item TradeItem::getItem()

@@ -57,6 +57,7 @@ void PriceAPI::LoadData()
 		});
 	t.detach();
 }
+
 /// <summary>
 /// Query singular item information from the backend.
 /// </summary>
@@ -113,6 +114,11 @@ Item PriceAPI::FindItem(string id)
 		FetchItem(id);
 	}
 	return Item();
+}
+
+Item PriceAPI::FindItem(int id)
+{
+	return FindItem(std::to_string(id));
 }
 
 /// <summary>

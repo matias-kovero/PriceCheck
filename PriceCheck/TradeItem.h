@@ -13,7 +13,7 @@ public:
   std::string paint;
 
 private:
-  Info priceInfo;
+  Info itemInfo = Info();
 
   ArrayWrapper<ProductAttributeWrapper> attributes = this->GetAttributes();
 
