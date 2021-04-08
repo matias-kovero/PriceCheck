@@ -8,7 +8,7 @@ class TradeItem : public OnlineProductWrapper
 public:
   TradeItem(const OnlineProductWrapper& i) : OnlineProductWrapper(i) {}
 
-  PaintPrice GetPrice(std::shared_ptr<GameWrapper> gw, std::shared_ptr<PriceAPI> api);
+  PaintPrice GetPrice();
 
   std::string paint;
 
@@ -17,7 +17,7 @@ private:
 
   ArrayWrapper<ProductAttributeWrapper> attributes = this->GetAttributes();
 
-  Info updateItemInfo(SpecialEditionDatabaseWrapper sb);
+  Info updateItemInfo();
 
-  Item getItem(std::string id, std::shared_ptr<PriceAPI> api);
+  Item getItem();
 };

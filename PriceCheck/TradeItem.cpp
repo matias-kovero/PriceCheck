@@ -3,28 +3,21 @@
 #include "PriceCheck.h";
 
 
-PaintPrice TradeItem::GetPrice(std::shared_ptr<GameWrapper> gw, std::shared_ptr<PriceAPI> api)
+PaintPrice TradeItem::GetPrice()
 {
   priceInfo = Info();
-  SpecialEditionDatabaseWrapper SE_DB = gw->GetItemsWrapper().GetSpecialEditionDB();
-  priceInfo = this->updateItemInfo(SE_DB);
-  string id = std::to_string(this->GetProductID());
+  priceInfo = this->updateItemInfo();
+  Item price = getItem();
 
-  // Todo: move the location of this.
-  Item price = getItem(id, api);
-  std::string paintName = "default";
-  if (!priceInfo.paint.empty())
-  {
-    paintName = priceInfo.paint;
-    for (auto& c : paintName) c = tolower(c);
-  }
-  paint = paintName;
-  auto p = price.data[paintName];
+  // Update paint field, currently used only for logging.
+  paint = _globalPriceAPI->paintNameList[priceInfo.paintID];
+
+  auto p = price.data[paint];
   
   return p;
 }
-
-Info TradeItem::updateItemInfo(SpecialEditionDatabaseWrapper sb)
+// TODO: add the ability to find paint price by paint id. (int)
+Info TradeItem::updateItemInfo()
 {
   for (int i = 0; i < attributes.Count(); i++)
   {
@@ -32,12 +25,16 @@ Info TradeItem::updateItemInfo(SpecialEditionDatabaseWrapper sb)
     {
       // Not implemented. Skip for now.
     }
+    if (attributes.Get(i).GetAttributeType() == "ProductAttribute_Quality_TA")
+    {
+      // Why all items don't have this?
+      auto pa = ProductAttribute_QualityWrapper(attributes.Get(i).memory_address);
+      priceInfo.quality = pa.GetQuality();
+    }
     if (attributes.Get(i).GetAttributeType() == "ProductAttribute_Painted_TA") // Painted
     {
       auto pa = ProductAttribute_PaintedWrapper(attributes.Get(i).memory_address);
-      auto color = pa.GetSortLabel().ToString();
-      color.replace(0, 7, ""); // Removing "Painted" from paint color.
-      priceInfo.paint = color;
+      priceInfo.paintID = pa.GetPaintID();
     }
     if (attributes.Get(i).GetAttributeType() == "ProductAttribute_Certified_TA") // Certified
     {
@@ -45,24 +42,26 @@ Info TradeItem::updateItemInfo(SpecialEditionDatabaseWrapper sb)
       auto cert = pa.GetRankLabel().ToString();
       priceInfo.certified = cert;
     }
-    if (attributes.Get(i).GetAttributeType() == "ProductAttribute_SpecialEdition_TA") // Certified
+    if (attributes.Get(i).GetAttributeType() == "ProductAttribute_SpecialEdition_TA") // Is this Obsolete now?
     {
       auto pa = ProductAttribute_SpecialEditionWrapper(attributes.Get(i).memory_address);
-      auto label = sb.GetSpecialEditionName(pa.GetEditionID());
+      auto label = _globalSpecialEditionManager->GetSpecialEditionName(pa.GetEditionID());
       label.replace(0, 8, ""); // Removing "Edition_" from label.
+      priceInfo.editionID = pa.GetEditionID();
       priceInfo.specialEdition = label;
     }
   }
   return priceInfo;
 }
 
-Item TradeItem::getItem(std::string id, std::shared_ptr<PriceAPI> api)
+Item TradeItem::getItem()
 {
-  auto data = api->priceData;
+  string id = std::to_string(this->GetProductID());
+  auto data = _globalPriceAPI->priceData;
   auto it = data.find(id);
   if (it != data.end())
   {
     return it->second;
   }
-  return api->FindItem(id);
+  return _globalPriceAPI->FindItem(id);
 }

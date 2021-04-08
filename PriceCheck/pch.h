@@ -8,6 +8,7 @@
 #include <httplib.h>
 
 #include "bakkesmod/plugin/bakkesmodplugin.h"
+#include "PriceAPI.h"
 
 #include <string>
 #include <vector>
@@ -20,6 +21,8 @@
 #include "fmt/ranges.h"
 
 extern std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
+extern std::shared_ptr<PriceAPI> _globalPriceAPI;
+extern std::shared_ptr<SpecialEditionDatabaseWrapper> _globalSpecialEditionManager;
 
 template<typename S, typename... Args>
 void LOG(const S& format_str, Args&&... args)

@@ -7,17 +7,23 @@
 BAKKESMOD_PLUGIN(PriceCheck, "Check item prices.", plugin_version, PLUGINTYPE_FREEPLAY)
 
 std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
+std::shared_ptr<SpecialEditionDatabaseWrapper> _globalSpecialEditionManager;
+std::shared_ptr<PriceAPI> _globalPriceAPI;
 
 void PriceCheck::onLoad()
 {
 	_globalCvarManager = cvarManager;
 	cvarManager->log("Plugin loaded!");
-
 	// Create our API
 	api = std::make_shared<PriceAPI>(cvarManager, gameWrapper);
+	_globalPriceAPI = api;
 
 	// Get all PriceData and cache it
 	api->LoadData();
+
+	// Create more global variables, no need to load these multiple times??
+	SpecialEditionDatabaseWrapper sedb = gameWrapper->GetItemsWrapper().GetSpecialEditionDB();
+	_globalSpecialEditionManager = std::make_shared<SpecialEditionDatabaseWrapper>(sedb);
 
 	cvarManager->registerNotifier("priceCheck_test", std::bind(&PriceAPI::Test, api), "test", 0);
 	//cvarManager->registerNotifier("help", std::bind(&PriceCheck::TempTest), "tt", 0);
@@ -31,13 +37,14 @@ void PriceCheck::onLoad()
 
 	cvarManager->registerCvar("testdbg", "6", "Debug item price", true, true, 0, true, 9999, false)
 		.addOnValueChanged(std::bind(&PriceCheck::TempTest, this, std::placeholders::_1, std::placeholders::_2));
-	/*
-	auto iw = gameWrapper->GetItemsWrapper();
-	auto tw = iw.GetTradeWrapper();
-	auto me = tw.GetSendingProducts();
-	ArrayWrapper<OnlineProductWrapper> arr = tw.GetSendingProducts();
-	ProductItem a = arr.Get(1);
-	*/
+	
+	//auto itemWrap = gameWrapper->GetItemsWrapper();
+	//auto tradeWrap = itemWrap.GetTradeWrapper();
+	//auto me = tradeWrap.GetSendingProducts();
+	//ArrayWrapper<OnlineProductWrapper> arr = tradeWrap.GetSendingProducts();
+	//ArrayWrapper<TradeItem> arr = tradeWrap.GetSendingProducts(); // no conversion on ArrayWrapper<OnlineProductWrapper> to ArrayWrapper<TradeItem>
+	//TradeItem a = arr.Get(1);
+	
 	//TempTest();
 
 	//auto cvar = cvarManager->registerCvar("template_cvar", "hello-cvar", "just a example of a cvar");
@@ -109,15 +116,15 @@ void PriceCheck::TempTest(string old, CVarWrapper cvar)
 	while (ic < itemsCount)
 	{
 		auto item = items.Get(ic);
+		// !item.GetIsUntradable() &&
 		if (!item.GetIsUntradable() && item.GetQuality() && !item.IsBlueprint() && (int)item.GetQuality() > 1 && (int)item.GetQuality() < 7) arr.push_back(item);
 		ic++;
 	}
 
-	for (int i = 0; i < arr.size(); i++)
+	for (TradeItem item : arr)
 	{
-		TradeItem item = arr[i];
 		auto name = item.GetLongLabel().ToString();
-		auto price = item.GetPrice(gameWrapper, api);
+		auto price = item.GetPrice();
 		if (!item.paint.empty())
 			cvarManager->log(name + " [" + item.paint + "] is " + std::to_string(price.min) + " - " + std::to_string(price.max) + " credits.");
 	}

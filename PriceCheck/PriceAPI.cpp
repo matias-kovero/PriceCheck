@@ -74,6 +74,7 @@ void PriceAPI::FetchItem(string id)
 			try
 			{
 				auto data = j.get<Item>();
+				//_cvar->log(std::to_string(data.test[1].white.min));
 				if (data.isError) _cvar->log("Item (" + id + ") not found. No price info on this item, if seems odd - contact developer!");
 				else 
 				{
@@ -102,7 +103,7 @@ Item PriceAPI::FindItem(string id)
 	auto it = _priceData.find(id);
 	if (it != _priceData.end())
 	{
-		_cvar->log("Found in item(" + it->second.id + ") in cache.");
+		_cvar->log("Found in item (" + it->second.id + ") in cache.");
 		return it->second;
 	}
 	else
@@ -182,6 +183,7 @@ void PriceAPI::OnFetchItem(Item item)
 #define J2(var, var2) j.at(#var).get_to(p.var2);
 #define JOPT(var) if(j.find(#var) != j.end()) {j.at(#var).get_to(p.var);}
 #define JOPT2(var, var2) if(j.find(#var) != j.end()){j.at(#var).get_to(p.var2);}
+#define JOPTD (var) if(j.find(#var) != j.end()) {j.at(#var).get_to(p.var);}
 
 void from_json(const json j, Item& p)
 {

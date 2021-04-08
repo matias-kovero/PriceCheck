@@ -61,6 +61,9 @@ struct Info
 	string paint;
 	string certified;
 	string specialEdition;
+	int paintID = 0;
+	int editionID = 0;
+	unsigned char quality;
 };
 
 void from_json(const json j, Item& p);
@@ -73,6 +76,23 @@ class PriceAPI
 public:
 	PriceAPI(std::shared_ptr<CVarManagerWrapper> _cvar, std::shared_ptr<GameWrapper> _gw);
 	std::map<string, Item> priceData;
+
+	std::map<int, string> paintNameList = {
+		{0, "default"},
+		{1, "crimson"},
+		{2, "lime"},
+		{3, "black"},
+		{4, "sky blue"},
+		{5, "cobalt"},
+		{6, "burnt sienna"},
+		{7, "forest green"},
+		{8, "purple"},
+		{9, "pink"},
+		{10, "orange"},
+		{11, "grey"},
+		{12, "titanium white"},
+		{13, "saffron"},
+	};
 
 	void Test();
 	void LoadData();
