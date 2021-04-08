@@ -87,21 +87,12 @@ private:
 
 	Item CreateItem(string id);
 
-	Item GetTemporaryPriceData(string id);
-
-	// Callback when we get bulk data from backend
-	// void OnAllPriceData(APIData res);
-
-	// Callback to fill cache
-	void OnPriceData(Item data);
-
 	// Request data from backend
 	void FetchItem(string id);
 
-	void GetItemPrice(string id);
-
 	// When initial data is loaded
 	void OnLoadData(APIData data);
+
 	// When backend returns item data.
 	void OnFetchItem(Item item);
 };

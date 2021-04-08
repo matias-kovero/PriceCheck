@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "PriceCheck.h"
+#include "TradeItem.h"
+#include "bakkesmod/wrappers/items/TradeWrapper.h";
 
 
 BAKKESMOD_PLUGIN(PriceCheck, "Check item prices.", plugin_version, PLUGINTYPE_FREEPLAY)
@@ -18,6 +20,7 @@ void PriceCheck::onLoad()
 	api->LoadData();
 
 	cvarManager->registerNotifier("priceCheck_test", std::bind(&PriceAPI::Test, api), "test", 0);
+	//cvarManager->registerNotifier("help", std::bind(&PriceCheck::TempTest), "tt", 0);
 
 	cvarManager->registerNotifier("priceCheck_notif", [&](std::vector<std::string> args) {
 		cvarManager->log("Hello notifier!");
@@ -25,6 +28,17 @@ void PriceCheck::onLoad()
 
 	cvarManager->registerCvar("check_price", "6", "Debug item price", true, true, 0, true, 9999, false)
 		.addOnValueChanged(std::bind(&PriceCheck::logPrice, this, std::placeholders::_1, std::placeholders::_2));
+
+	cvarManager->registerCvar("testdbg", "6", "Debug item price", true, true, 0, true, 9999, false)
+		.addOnValueChanged(std::bind(&PriceCheck::TempTest, this, std::placeholders::_1, std::placeholders::_2));
+	/*
+	auto iw = gameWrapper->GetItemsWrapper();
+	auto tw = iw.GetTradeWrapper();
+	auto me = tw.GetSendingProducts();
+	ArrayWrapper<OnlineProductWrapper> arr = tw.GetSendingProducts();
+	ProductItem a = arr.Get(1);
+	*/
+	//TempTest();
 
 	//auto cvar = cvarManager->registerCvar("template_cvar", "hello-cvar", "just a example of a cvar");
 	//auto cvar2 = cvarManager->registerCvar("template_cvar2", "0", "just a example of a cvar with more settings", true, true, -10, true, 10 );
@@ -81,5 +95,30 @@ void PriceCheck::logPrice(string old, CVarWrapper cvar)
 		{
 			cvarManager->log("[Info] " + e.first + ": " + std::to_string(e.second.min) + " - " + std::to_string(e.second.max));
 		}
+	}
+}
+
+void PriceCheck::TempTest(string old, CVarWrapper cvar)
+{
+	auto items = gameWrapper->GetItemsWrapper().GetOwnedProducts();
+	auto itemsCount = items.Count();
+	cvarManager->log("Looks like you have " + std::to_string(itemsCount) + " items!");
+
+	std::vector<OnlineProductWrapper> arr;
+	int ic = 0;
+	while (ic < itemsCount)
+	{
+		auto item = items.Get(ic);
+		if (!item.GetIsUntradable() && item.GetQuality() && !item.IsBlueprint() && (int)item.GetQuality() > 1 && (int)item.GetQuality() < 7) arr.push_back(item);
+		ic++;
+	}
+
+	for (int i = 0; i < arr.size(); i++)
+	{
+		TradeItem item = arr[i];
+		auto name = item.GetLongLabel().ToString();
+		auto price = item.GetPrice(gameWrapper, api);
+		if (!item.paint.empty())
+			cvarManager->log(name + " [" + item.paint + "] is " + std::to_string(price.min) + " - " + std::to_string(price.max) + " credits.");
 	}
 }

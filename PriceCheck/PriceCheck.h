@@ -30,6 +30,7 @@ public:
 	Item getItem(string id);
 
 	void logPrice(string id, CVarWrapper cvar);
+	void TempTest(string id, CVarWrapper cvar);
 	// Inherited via PluginWindow
 	/*
 

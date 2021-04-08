@@ -30,6 +30,7 @@ void PriceAPI::Test()
 /// </summary>
 void PriceAPI::LoadData()
 {
+	_cvar->log("API started loading data...");
 	_gw->Toast("PriceAPI log", "Fetching data...");
 	thread t([this]() {
 		string url = "/item/";
@@ -77,7 +78,7 @@ void PriceAPI::FetchItem(string id)
 				else 
 				{
 					_cvar->log("Time: " + data.last_refresh);
-					_cvar->log("Going raw: " + res->body);
+					//_cvar->log("Going raw: " + res->body);
 					OnFetchItem(data);
 				}
 			}
@@ -139,6 +140,7 @@ Item PriceAPI::CreateItem(string id)
 void PriceAPI::OnLoadData(APIData res)
 {
 	priceData = res.data;
+	_cvar->log("API Data loaded!");
 }
 
 /// <summary>
@@ -149,10 +151,12 @@ void PriceAPI::OnFetchItem(Item item)
 {
 	_cvar->log("Updating item(" + item.id + ")");
 	// Dbg log
+	/*
 	for (auto e : item.data)
 	{
 		_cvar->log("Data:" + e.first + " " + std::to_string(e.second.min) + " " + std::to_string(e.second.max));
 	}
+	*/
 
 	auto it = _priceData.find(item.id);
 	if (it != _priceData.end())
