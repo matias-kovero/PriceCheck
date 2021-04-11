@@ -18,32 +18,33 @@ PaintPrice TradeItem::GetPrice()
 // TODO: add the ability to find paint price by paint id. (int)
 Info TradeItem::updateItemInfo()
 {
-  for (int i = 0; i < attributes.Count(); i++)
+  auto att = this->GetAttributes();
+  for (int i = 0; i < att.Count(); i++)
   {
-    if (attributes.Get(i).GetAttributeType() == "ProductAttribute_TitleID_TA")
+    if (att.Get(i).GetAttributeType() == "ProductAttribute_TitleID_TA")
     {
       // Not implemented. Skip for now.
     }
-    if (attributes.Get(i).GetAttributeType() == "ProductAttribute_Quality_TA")
+    if (att.Get(i).GetAttributeType() == "ProductAttribute_Quality_TA")
     {
       // Why all items don't have this?
-      auto pa = ProductAttribute_QualityWrapper(attributes.Get(i).memory_address);
+      auto pa = ProductAttribute_QualityWrapper(att.Get(i).memory_address);
       itemInfo.quality = pa.GetQuality();
     }
-    if (attributes.Get(i).GetAttributeType() == "ProductAttribute_Painted_TA") // Painted
+    if (att.Get(i).GetAttributeType() == "ProductAttribute_Painted_TA") // Painted
     {
-      auto pa = ProductAttribute_PaintedWrapper(attributes.Get(i).memory_address);
+      auto pa = ProductAttribute_PaintedWrapper(att.Get(i).memory_address);
       itemInfo.paintID = pa.GetPaintID();
     }
-    if (attributes.Get(i).GetAttributeType() == "ProductAttribute_Certified_TA") // Certified
+    if (att.Get(i).GetAttributeType() == "ProductAttribute_Certified_TA") // Certified
     {
-      auto pa = ProductAttribute_CertifiedWrapper(attributes.Get(i).memory_address);
+      auto pa = ProductAttribute_CertifiedWrapper(att.Get(i).memory_address);
       auto cert = pa.GetRankLabel().ToString();
       itemInfo.certified = cert;
     }
-    if (attributes.Get(i).GetAttributeType() == "ProductAttribute_SpecialEdition_TA") // Is this Obsolete now?
+    if (att.Get(i).GetAttributeType() == "ProductAttribute_SpecialEdition_TA") // Is this Obsolete now?
     {
-      auto pa = ProductAttribute_SpecialEditionWrapper(attributes.Get(i).memory_address);
+      auto pa = ProductAttribute_SpecialEditionWrapper(att.Get(i).memory_address);
       auto label = _globalSpecialEditionManager->GetSpecialEditionName(pa.GetEditionID());
       label.replace(0, 8, ""); // Removing "Edition_" from label.
       itemInfo.editionID = pa.GetEditionID();
@@ -53,6 +54,7 @@ Info TradeItem::updateItemInfo()
   return itemInfo;
 }
 
+/*
 Item TradeItem::getItem()
 {
   string id = std::to_string(this->GetProductID());
@@ -64,3 +66,4 @@ Item TradeItem::getItem()
   }
   return _globalPriceAPI->FindItem(id);
 }
+*/

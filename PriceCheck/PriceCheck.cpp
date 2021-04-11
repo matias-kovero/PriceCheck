@@ -3,6 +3,17 @@
 #include "TradeItem.h"
 #include "bakkesmod/wrappers/items/TradeWrapper.h";
 
+#define CVAR_USE_AVG "pc_use_avg"
+#define CVAR_GIVE_X "pc_give_x"
+#define CVAR_GIVE_Y "pc_give_y"
+#define CVAR_RECV_X "pc_recv_x"
+#define CVAR_RECV_Y "pc_recv_y"
+#define CVAR_HEIGHT "pc_height"
+#define CVAR_WIDTH "pc_width"
+#define HOOK_TRADE_START "Function TAGame.GFxData_TradeLobby_TA.HandleAcceptedInviteToTrade"
+#define HOOK_TRADE_END "Function TAGame.GFxData_TradeLobby_TA.CancelTrading"
+#define HOOK_TRADE_CHANGE "Function TAGame.GFxData_TradeLobby_TA.GetProductOfferings"
+
 
 BAKKESMOD_PLUGIN(PriceCheck, "Check item prices.", plugin_version, PLUGINTYPE_FREEPLAY)
 
@@ -10,33 +21,84 @@ std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 std::shared_ptr<SpecialEditionDatabaseWrapper> _globalSpecialEditionManager;
 std::shared_ptr<PriceAPI> _globalPriceAPI;
 
-void PriceCheck::onLoad()
+void PriceCheck::registerCvars()
 {
-	_globalCvarManager = cvarManager;
-	cvarManager->log("Plugin loaded!");
-	// Create our API
-	api = std::make_shared<PriceAPI>(cvarManager, gameWrapper);
-	_globalPriceAPI = api;
+	/* ==================
+	*		SET FILE CVARS
+	* ===================
+	*/
+	cvarManager->registerCvar(CVAR_USE_AVG, "0", "Use AVG prices", false, true, 0, true, 1).bindTo(useAVG);
 
-	// Get all PriceData and cache it
-	api->LoadData();
+	cvarManager->registerCvar(CVAR_GIVE_X, "100", "Your items info X", false, true, 0, true, 1920).bindTo(giveX); // How to get users screen width?
+	cvarManager->registerCvar(CVAR_GIVE_Y, "100", "Your items info Y", false, true, 0, true, 1080).bindTo(giveY); // How to get users screen height?
+	cvarManager->registerCvar(CVAR_RECV_X, "100", "Others items info X", false, true, 0, true, 1920).bindTo(recvX); // How to get users screen width?
+	cvarManager->registerCvar(CVAR_RECV_Y, "100", "Others items info Y", false, true, 0, true, 1080).bindTo(recvY); // How to get users screen height?
+	
+	cvarManager->registerCvar(CVAR_WIDTH, "100", "Info Width", false, true, 0, true, 400).bindTo(width);
+	cvarManager->registerCvar(CVAR_HEIGHT, "100", "Info Height", false, true, 0, true, 400).bindTo(height);
 
-	// Create more global variables, no need to load these multiple times??
-	SpecialEditionDatabaseWrapper sedb = gameWrapper->GetItemsWrapper().GetSpecialEditionDB();
-	_globalSpecialEditionManager = std::make_shared<SpecialEditionDatabaseWrapper>(sedb);
-
+	gameWrapper->RegisterDrawable(std::bind(&PriceCheck::Renderer, this, std::placeholders::_1));
+	/* ==================
+	*		DEBUG CVARS
+	* ===================
+	*/
 	cvarManager->registerNotifier("priceCheck_test", std::bind(&PriceAPI::Test, api), "test", 0);
-	//cvarManager->registerNotifier("help", std::bind(&PriceCheck::TempTest), "tt", 0);
+
+	cvarManager->registerNotifier("pc_forceupdate", std::bind(&PriceAPI::LoadData, api), "test", 0);
 
 	cvarManager->registerNotifier("priceCheck_notif", [&](std::vector<std::string> args) {
 		cvarManager->log("Hello notifier!");
-	}, "", 0);
+		}, "", 0);
 
 	cvarManager->registerCvar("check_price", "6", "Debug item price", true, true, 0, true, 9999, false)
 		.addOnValueChanged(std::bind(&PriceCheck::logPrice, this, std::placeholders::_1, std::placeholders::_2));
 
 	cvarManager->registerCvar("testdbg", "6", "Debug item price", true, true, 0, true, 9999, false)
 		.addOnValueChanged(std::bind(&PriceCheck::TempTest, this, std::placeholders::_1, std::placeholders::_2));
+}
+
+void PriceCheck::registerHooks()
+{
+	gameWrapper->HookEventWithCallerPost<TradeWrapper>(HOOK_TRADE_START,
+		[this](TradeWrapper caller, void* params, std::string eventName) { tradeStart(caller); });
+
+	gameWrapper->HookEventWithCallerPost<TradeWrapper>(HOOK_TRADE_END,
+		[this](TradeWrapper caller, void* params, std::string eventName) { tradeEnd(caller); });
+
+	gameWrapper->HookEventWithCallerPost<TradeWrapper>(HOOK_TRADE_CHANGE,
+		[this](TradeWrapper caller, void* params, std::string eventName) { checkPrices(caller); });
+}
+
+void PriceCheck::onLoad()
+{
+	_globalCvarManager = cvarManager;
+	cvarManager->log("Plugin loaded!");
+
+	api = std::make_shared<PriceAPI>(cvarManager, gameWrapper);
+	_globalPriceAPI = api;
+
+	// Get all PriceData and cache it
+	api->LoadData();
+
+	enabled = std::make_shared<bool>(true);
+	useAVG = std::make_shared<bool>(false);
+
+	giveX = std::make_shared<int>(true);
+	giveY = std::make_shared<int>(true);
+	recvX = std::make_shared<int>(true);
+	recvY = std::make_shared<int>(true);
+	width = std::make_shared<int>(true);
+	height = std::make_shared<int>(true);
+
+	tradeValueGive = std::make_shared<TradeValue>(TradeValue());
+	tradeValueRecv = std::make_shared<TradeValue>(TradeValue());
+
+	registerHooks();
+	registerCvars();
+
+	// Create more global variables, no need to load these multiple times??
+	SpecialEditionDatabaseWrapper sedb = gameWrapper->GetItemsWrapper().GetSpecialEditionDB();
+	_globalSpecialEditionManager = std::make_shared<SpecialEditionDatabaseWrapper>(sedb);
 	
 	//auto itemWrap = gameWrapper->GetItemsWrapper();
 	//auto tradeWrap = itemWrap.GetTradeWrapper();
@@ -97,6 +159,7 @@ void PriceCheck::logPrice(string old, CVarWrapper cvar)
 	{
 		string id = cvar.getStringValue();
 		auto item = getItem(id);
+		cvarManager->log("[Time] " + std::to_string(item.last_refresh));
 
 		for (auto e : item.data) 
 		{
@@ -127,5 +190,101 @@ void PriceCheck::TempTest(string old, CVarWrapper cvar)
 		auto price = item.GetPrice();
 		if (!item.paint.empty())
 			cvarManager->log(name + " [" + item.paint + "] is " + std::to_string(price.min) + " - " + std::to_string(price.max) + " credits.");
+	}
+}
+
+void PriceCheck::tradeStart(TradeWrapper trade)
+{
+	cvarManager->log("Trade started!");
+	if (trade.IsNull())
+	{
+		cvarManager->log("Trying to start null trade!");
+		return;
+	}
+	*enabled = true;
+}
+
+void PriceCheck::tradeEnd(TradeWrapper trade)
+{
+	cvarManager->log("Trade ended!");
+	if (trade.IsNull())
+	{
+		cvarManager->log("Trying to end null trade!");
+		return;
+	}
+	*enabled = false;
+}
+
+void PriceCheck::checkPrices(TradeWrapper trade)
+{
+	// This is triggering x2 when item is changed on either offerings.
+	cvarManager->log("-------- Items Changed --------");
+	if (trade.IsNull())
+	{
+		cvarManager->log("Null trade");
+		return;
+	}
+
+	ArrayWrapper<OnlineProductWrapper> me = trade.GetSendingProducts();
+	ArrayWrapper<OnlineProductWrapper> him = trade.GetReceivingProducts();
+
+	cvarManager->log("Sending (" + std::to_string(me.Count()) + "):");
+
+	*tradeValueGive = TradeValue();
+	*tradeValueRecv = TradeValue();
+	/*
+	tradeValueGive.operator*().max = 0;
+	tradeValueRecv.operator*().min = 0;
+	tradeValueRecv.operator*().max = 0;
+	*/
+
+	for (TradeItem i : me)
+	{
+		auto price = i.GetPrice();
+		cvarManager->log(i.GetLongLabel().ToString() + " (" + i.paint + ") | " + std::to_string(price.min) + " - " + std::to_string(price.max) + " credits.");
+		tradeValueGive.operator*().min += price.min;
+		tradeValueGive.operator*().max += price.max;
+	}
+	cvarManager->log("Receiving (" + std::to_string(him.Count()) + "):");
+	for (TradeItem i : him)
+	{
+		auto price = i.GetPrice();
+		cvarManager->log(i.GetLongLabel().ToString() + " (" + i.paint + ") | " + std::to_string(price.min) + " - " + std::to_string(price.max) + " credits.");
+		tradeValueRecv.operator*().min += price.min;
+		tradeValueRecv.operator*().max += price.max;
+	}
+	cvarManager->log("---------------------------------------");
+}
+
+void PriceCheck::Renderer(CanvasWrapper canvas)
+{
+	if (*enabled)
+	{
+		Vector2 givePos = { (int)*giveX, (int)*giveY };
+		Vector2 recvPos = { (int)*recvX, (int)*recvY };
+		
+		// Draw box
+		canvas.SetColor(0, 0, 0, 55);
+		canvas.SetPosition(givePos);
+		canvas.FillBox(Vector2{ (int)*width, (int)*height });
+
+		canvas.SetColor(255, 255, 255, 255);
+		canvas.SetPosition(Vector2{ givePos.X + 5, givePos.Y + 5 });
+		if (*useAVG)
+			canvas.DrawString("Trade value: " + std::to_string((tradeValueGive.get()->min + tradeValueGive.get()->max)/2));
+		else
+			canvas.DrawString("Trade value: " + std::to_string(tradeValueGive.get()->min) + " - " + std::to_string(tradeValueGive.get()->max));
+
+		canvas.SetColor(0, 0, 0, 55);
+		canvas.SetPosition(recvPos);
+		canvas.FillBox(Vector2{ (int)*width, (int)*height });
+
+		canvas.SetColor(255, 255, 255, 255);
+		canvas.SetPosition(Vector2{ recvPos.X + 5, recvPos.Y + 5 });
+		if (*useAVG)
+			canvas.DrawString("Trade value: " + std::to_string((tradeValueRecv.get()->min + tradeValueRecv.get()->max) / 2));
+		else
+			canvas.DrawString("Trade value: " + std::to_string(tradeValueRecv.get()->min) + " - " + std::to_string(tradeValueRecv.get()->max));
+
 	}
 }

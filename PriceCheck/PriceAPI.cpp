@@ -31,7 +31,6 @@ void PriceAPI::Test()
 void PriceAPI::LoadData()
 {
 	_cvar->log("API started loading data...");
-	_gw->Toast("PriceAPI log", "Fetching data...");
 	thread t([this]() {
 		string url = "/item/";
 
@@ -44,8 +43,7 @@ void PriceAPI::LoadData()
 			try
 			{
 				auto data = j.get<APIData>();
-				_cvar->log("Items are updated: " + data.last_refresh);
-				_cvar->log("We have info on " + std::to_string(data.count) + " items.");
+				_cvar->log("Got info on " + std::to_string(data.count) + " items.");
 				OnLoadData(data);
 			}
 			catch (const std::exception& e)
@@ -79,7 +77,7 @@ void PriceAPI::FetchItem(string id)
 				if (data.isError) _cvar->log("Item (" + id + ") not found. No price info on this item, if seems odd - contact developer!");
 				else 
 				{
-					_cvar->log("Time: " + data.last_refresh);
+					//_cvar->log("Time: " + data.last_refresh);
 					//_cvar->log("Going raw: " + res->body);
 					OnFetchItem(data);
 				}
@@ -111,6 +109,8 @@ Item PriceAPI::FindItem(string id)
 	{
 		_cvar->log("Item (" + id + ") not found. Sending req...");
 		_priceData[id] = CreateItem(id); // Insert?
+		Item i = _priceData[id];
+		_cvar->log("No item. Created one: " + i.id);
 		FetchItem(id);
 	}
 	return Item();
@@ -146,8 +146,14 @@ Item PriceAPI::CreateItem(string id)
 /// <param name="res">APIData</param>
 void PriceAPI::OnLoadData(APIData res)
 {
+	using namespace std::chrono;
 	priceData = res.data;
-	_cvar->log("API Data loaded!");
+	std::time_t updated = (intmax_t)res.last_refresh;
+	std::chrono::duration<double> elapsed = std::chrono::system_clock::now()-std::chrono::system_clock::from_time_t(updated);
+
+	_gw->Toast("PriceCheck", "Item prices loaded.\nPrices updated "
+		+ std::to_string(duration_cast<hours>(elapsed).count()) + "h " + std::to_string(duration_cast<minutes>(elapsed).count()) + "m"
+		+ " ago.");
 }
 
 /// <summary>

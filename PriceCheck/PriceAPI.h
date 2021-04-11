@@ -43,14 +43,14 @@ struct Item
 {
 	string id;
 	bool isError = false;
-	string last_refresh;
+	intmax_t last_refresh;
 	std::map<string, PaintPrice> data;
 };
 
 struct APIData
 {
 	int count;
-	string last_refresh;
+	intmax_t last_refresh;
 	bool isError;
 	std::map<string, Item> data;
 };

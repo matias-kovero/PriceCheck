@@ -15,8 +15,6 @@ public:
 private:
   Info itemInfo = Info();
 
-  ArrayWrapper<ProductAttributeWrapper> attributes = this->GetAttributes();
-
   Info updateItemInfo();
 
   Item getItem();
