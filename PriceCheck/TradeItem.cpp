@@ -1,21 +1,30 @@
 #include "pch.h"
 #include "TradeItem.h"
-#include "PriceCheck.h";
 
 
 PaintPrice TradeItem::GetPrice()
 {
+  // Check item attributes
   itemInfo = this->updateItemInfo();
-  Item price = _globalPriceAPI->FindItem(this->GetProductID());
 
-  // Update paint field, currently used only for logging.
-  paint = _globalPriceAPI->paintNameList[itemInfo.paintID];
+  if (this->IsBlueprint()) 
+  {
+    Blueprint price = _globalPriceAPI->FindBlueprint(itemInfo.originalID);
+    paint = paintMap[itemInfo.paintID];
 
-  auto p = price.data[paint];
-  
-  return p;
+    auto p = price.data[paint];
+    return p;
+  }
+  else 
+  {
+    Item price = _globalPriceAPI->FindItem(this->GetProductID());
+    paint = paintMap[itemInfo.paintID];
+
+    auto p = price.data[paint];
+    return p;
+  }
 }
-// TODO: add the ability to find paint price by paint id. (int)
+
 Info TradeItem::updateItemInfo()
 {
   auto att = this->GetAttributes();
@@ -24,6 +33,11 @@ Info TradeItem::updateItemInfo()
     if (att.Get(i).GetAttributeType() == "ProductAttribute_TitleID_TA")
     {
       // Not implemented. Skip for now.
+    }
+    if (att.Get(i).GetAttributeType() == "ProductAttribute_Blueprint_TA")
+    {
+      auto pa = ProductAttribute_BlueprintWrapper(att.Get(i).memory_address);
+      itemInfo.originalID = pa.GetProductID();
     }
     if (att.Get(i).GetAttributeType() == "ProductAttribute_Quality_TA")
     {
@@ -53,17 +67,3 @@ Info TradeItem::updateItemInfo()
   }
   return itemInfo;
 }
-
-/*
-Item TradeItem::getItem()
-{
-  string id = std::to_string(this->GetProductID());
-  auto data = _globalPriceAPI->priceData;
-  auto it = data.find(id);
-  if (it != data.end())
-  {
-    return it->second;
-  }
-  return _globalPriceAPI->FindItem(id);
-}
-*/

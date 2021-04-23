@@ -93,6 +93,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="APIClasses.cpp" />
     <ClCompile Include="fmt\src\format.cc" />
     <ClCompile Include="fmt\src\os.cc" />
     <ClCompile Include="imgui\imgui.cpp" />
@@ -116,6 +117,8 @@
     <ClCompile Include="PriceCheckGUI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="APIClasses.h" />
+    <ClInclude Include="defines.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imguivariouscontrols.h" />

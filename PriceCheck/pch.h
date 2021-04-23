@@ -12,6 +12,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <map>
 
 #include "imgui/imgui.h"
 
@@ -21,6 +22,12 @@
 extern std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 extern std::shared_ptr<PriceAPI> _globalPriceAPI;
 extern std::shared_ptr<SpecialEditionDatabaseWrapper> _globalSpecialEditionManager;
+
+struct DropParams
+{
+  unsigned char padding[0x8];
+  int ReturnValue;
+};
 
 template<typename S, typename... Args>
 void LOG(const S& format_str, Args&&... args)

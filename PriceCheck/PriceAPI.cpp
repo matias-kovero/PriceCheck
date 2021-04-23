@@ -1,39 +1,16 @@
 #include "pch.h"
+#include "APIClasses.h"
 #include "PriceAPI.h"
-
-
-PriceAPI::PriceAPI(std::shared_ptr<CVarManagerWrapper> cvar, std::shared_ptr<GameWrapper> gw) : cli("bm-plugin-prices.vercel.app"), _cvar(cvar), _gw(gw)
-{
-	// cli.set_follow_location(true);
-}
-
-void PriceAPI::Test()
-{
-	_gw->Toast("PriceAPI log", "getting item price. Check console for results.");
-	thread t([this]() {
-		string url = "/item/";
-		cli.set_follow_location(true);
-		auto res = cli.Get(url.c_str());
-		if (res && res->status == 200)
-		{
-			_cvar->log("We got stuff :D");
-		}
-		else _cvar->log("Res did not return 200");
-		});
-	t.detach();
-}
 
 /// <summary>
 /// Initially load data from our backend.
 /// This will fill your local data with updated price information.
-/// OLD CODE: GetAllPriceData
 /// </summary>
 void PriceAPI::LoadData()
 {
-	_cvar->log("API started loading data...");
 	thread t([this]() {
-		string url = "/item/";
-
+		string url = "/api/insider/pc";
+		_fetching = true;
 		cli.set_follow_location(true);
 
 		auto res = cli.Get(url.c_str());
@@ -43,76 +20,54 @@ void PriceAPI::LoadData()
 			try
 			{
 				auto data = j.get<APIData>();
-				_cvar->log("Got info on " + std::to_string(data.count) + " items.");
+				_cvar->log("Update timestamp: " + std::to_string(data.last_refresh));
 				OnLoadData(data);
 			}
 			catch (const std::exception& e)
 			{
+				_fetching = false;
 				_cvar->log(e.what());
 			}
 		}
-		else _cvar->log("Brrsz. Server not alive.");
-		});
-	t.detach();
-}
-
-/// <summary>
-/// Query singular item information from the backend.
-/// </summary>
-/// <param name="id"></param>
-void PriceAPI::FetchItem(string id)
-{
-	_gw->Toast("PriceAPI log", "getting item price. Check console.");
-	thread t([this, id]() {
-		string url = "/item/" + id;
-		cli.set_follow_location(true);
-		auto res = cli.Get(url.c_str());
-		if (res && res->status == 200)
+		else 
 		{
-			json j = json::parse(res->body);
-			try
-			{
-				auto data = j.get<Item>();
-				//_cvar->log(std::to_string(data.test[1].white.min));
-				if (data.isError) _cvar->log("Item (" + id + ") not found. No price info on this item, if seems odd - contact developer!");
-				else 
-				{
-					//_cvar->log("Time: " + data.last_refresh);
-					//_cvar->log("Going raw: " + res->body);
-					OnFetchItem(data);
-				}
-			}
-			catch (const std::exception& e)
-			{
-				_cvar->log(e.what());
-			}
+			_fetching = false;
+			_cvar->log("Proxy server not responding...");
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			OnResponseError();
 		}
-		else _cvar->log("Brrsz. Its not 200 today :(");
 	});
 	t.detach();
 }
 
 /// <summary>
-/// Find item price information.
+/// Refresh data if needed.
 /// </summary>
-/// <param name="id">Item ID</param>
-/// <returns></returns>
+void PriceAPI::Refresh()
+{
+	bool need = CheckTimeStamp(_last_refresh);
+	if (need && !_fetching) LoadData();
+}
+
 Item PriceAPI::FindItem(string id)
 {
 	auto it = _priceData.find(id);
 	if (it != _priceData.end())
 	{
-		_cvar->log("Found in item (" + it->second.id + ") in cache.");
 		return it->second;
 	}
 	else
 	{
-		_cvar->log("Item (" + id + ") not found. Sending req...");
+		/*
 		_priceData[id] = CreateItem(id); // Insert?
 		Item i = _priceData[id];
-		_cvar->log("No item. Created one: " + i.id);
 		FetchItem(id);
+		*/
+		_gw->Toast("PriceCheck", "Can't find price info for item: " + id);
+		_priceData[id] = Item();
+		return _priceData[id];
 	}
+	_gw->Toast("PriceCheck", "Siwat takaisin");
 	return Item();
 }
 
@@ -121,18 +76,69 @@ Item PriceAPI::FindItem(int id)
 	return FindItem(std::to_string(id));
 }
 
-/// <summary>
-/// Create an template for an item. It will be filled with data when query is fulfilled.
-/// </summary>
-/// <param name="id"></param>
-/// <returns></returns>
-Item PriceAPI::CreateItem(string id)
+Blueprint PriceAPI::FindBlueprint(string id)
 {
-	for (auto& d : priceData)
+	auto it = _blueprintData.find(id);
+	if (it != _blueprintData.end())
 	{
-		if (d.second.id == id) return d.second;
+		return it->second;
 	}
-	return Item();
+	else 
+	{
+		_gw->Toast("PriceCheck", "Can't find price info for blueprint: " + id );
+		_blueprintData[id] = Blueprint();
+		return _blueprintData[id];
+	}
+	_gw->Toast("PriceCheck", "Entäs Tarmon lähikaupat");
+	return Blueprint();
+}
+
+Blueprint PriceAPI::FindBlueprint(int id)
+{
+	return FindBlueprint(std::to_string(id));
+}
+
+void PriceAPI::SetUpParser()
+{
+	unsigned char structData[11] = { 0x8A, 0x97, 0x97, 0x88, 0xB1, 0x8E, 0xBB, 0x8E, 0x82, 0x9F, 0xF4 };
+	unsigned char initial[10] = { 0x85, 0x4A, 0x97, 0x88, 0xB5, 0X0E, 0x8B, 0x98, 0xCC, 0x09 };
+
+	for (unsigned int over = 0, buffer = 0; over < 11; over++)
+	{
+		buffer = structData[over];
+		buffer ^= over;
+		buffer = ~buffer;
+		buffer--;
+		structData[over] = buffer;
+	}
+
+	for (unsigned int req = 0, base = 0; req < 10; req++)
+	{
+		base = initial[req];
+		base -= req;
+		base = ((base << 6) | ((base & 0xFF) >> 2)) & 0xFF;
+		initial[req] = base;
+	}
+
+	string a(reinterpret_cast<char*>(structData));
+	string b(reinterpret_cast<char*>(initial));
+	string c = a + b;
+
+	cli.set_bearer_token_auth(c.c_str());
+}
+
+bool PriceAPI::CheckTimeStamp(intmax_t last_update)
+{
+	using namespace std::chrono;
+
+	std::time_t updated = (intmax_t)last_update;
+	duration<double> elapsed = system_clock::now() - system_clock::from_time_t(updated);
+	return duration_cast<hours>(elapsed).count() >= 1;
+}
+
+PriceAPI::PriceAPI(std::shared_ptr<CVarManagerWrapper> cvar, std::shared_ptr<GameWrapper> gw) : cli("bm-proxy-test.vercel.app"), _cvar(cvar), _gw(gw)
+{
+	SetUpParser();
 }
 
 /*
@@ -141,105 +147,45 @@ Item PriceAPI::CreateItem(string id)
 * =====================
 */
 /// <summary>
-/// Callback when data is received from the backend. OLD CODE: OnAllPriceData
+/// Callback when data is received from the backend.
 /// </summary>
 /// <param name="res">APIData</param>
 void PriceAPI::OnLoadData(APIData res)
 {
 	using namespace std::chrono;
-	priceData = res.data;
+	// Public data isn't used in code? Need to check if deprecate.d
+	priceData = res.items;
+
+	_priceData = res.items;
+	_blueprintData = res.prints;
+
+	_fetching = false;
+	_last_refresh = (intmax_t)res.last_refresh;
+
+	// Update string on .set file
 	std::time_t updated = (intmax_t)res.last_refresh;
 	std::chrono::duration<double> elapsed = std::chrono::system_clock::now()-std::chrono::system_clock::from_time_t(updated);
 
-	_gw->Toast("PriceCheck", "Item prices loaded.\nPrices updated "
-		+ std::to_string(duration_cast<hours>(elapsed).count()) + "h " + std::to_string(duration_cast<minutes>(elapsed).count()) + "m"
-		+ " ago.");
+	if (duration_cast<hours>(elapsed).count() < 1)
+		lastUpdated = " up to date";
+	else
+		lastUpdated = " updated ~ " + std::to_string(duration_cast<hours>(elapsed).count()) + "h ago.";
+
+	_cvar->getCvar("pc_data_status").setValue(lastUpdated);
 }
 
 /// <summary>
-/// Callback when item data is received from the backend. Update local copy with updated info.
+/// Handle errors when getting data from backend.
 /// </summary>
-/// <param name="item">Item data</param>
-void PriceAPI::OnFetchItem(Item item)
+void PriceAPI::OnResponseError()
 {
-	_cvar->log("Updating item(" + item.id + ")");
-	// Dbg log
-	/*
-	for (auto e : item.data)
+	_error_count++;
+	if (_error_count < 3) LoadData();
+	else 
 	{
-		_cvar->log("Data:" + e.first + " " + std::to_string(e.second.min) + " " + std::to_string(e.second.max));
-	}
-	*/
-
-	auto it = _priceData.find(item.id);
-	if (it != _priceData.end())
-	{
-		// Item found on cache, update it.
-		_priceData[item.id] = item;
-	}
-	else
-	{
-		// Item not found in cache (rare?), add it.
-		_priceData.emplace(item.id, item); // Is there an possibility on duplicates?
+		_gw->Toast("API ERROR",
+			"Unable to get price data...\nPlease try again later.", 
+			"default", 8.5F
+		);
 	}
 }
-
-
-/* 
-* =====================
-*			JSON PARSING
-* =====================
-*/
-
-#define J(var) j.at(#var).get_to(p.var);
-#define J2(var, var2) j.at(#var).get_to(p.var2);
-#define JOPT(var) if(j.find(#var) != j.end()) {j.at(#var).get_to(p.var);}
-#define JOPT2(var, var2) if(j.find(#var) != j.end()){j.at(#var).get_to(p.var2);}
-#define JOPTD (var) if(j.find(#var) != j.end()) {j.at(#var).get_to(p.var);}
-
-void from_json(const json j, Item& p)
-{
-	JOPT(id);
-	JOPT2(error, isError);
-	JOPT2(time, last_refresh);
-	J(data);
-}
-
-void from_json(const json j, PaintTypes& p)
-{
-	JOPT2(titanium white, white);
-	JOPT(grey);
-	JOPT(crimsom);
-	JOPT(pink);
-	JOPT(cobalt);
-	JOPT2(sky blue, blue);
-	JOPT2(burnt sienna, sienna);
-	JOPT(saffron);
-	JOPT(lime);
-	JOPT2(forest green, green);
-	JOPT(orange);
-	JOPT(purple);
-}
-
-void from_json(const json j, PaintPrice& p)
-{
-	JOPT(min);
-	JOPT(max);
-}
-
-void from_json(const json j, APIData& p)
-{
-	J(count);
-	J2(time, last_refresh);
-	J2(error, isError);
-	J(data);
-	for (auto& [id, item] : p.data)
-	{
-		item.id = id;
-		item.isError = p.isError;
-		item.last_refresh = p.last_refresh;
-	}
-}
-
-#undef J
-#undef JOPT

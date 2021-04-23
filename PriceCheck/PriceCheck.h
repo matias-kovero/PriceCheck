@@ -12,9 +12,14 @@ constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_M
 /*
 * !! KNOWLEDGE !!
 *
-* Cinder: https://www.youtube.com/watch?v=jyFuN8k2uIs
 * RS: https://www.youtube.com/watch?v=t-5SGaunD_s
 */
+
+struct HandleNewOnlineItemParam
+{
+	void* no_touch;
+	uintptr_t online_product_ptr;
+};
 
 struct TradeValue
 {
@@ -22,21 +27,35 @@ struct TradeValue
 	int max = 0;
 };
 
+enum Currencies
+{
+	Credits = 13
+};
+
 class PriceCheck: public BakkesMod::Plugin::BakkesModPlugin/*, public BakkesMod::Plugin::PluginWindow*/
 {
 private:
-	std::shared_ptr<bool> enabled;
-	std::shared_ptr<bool> useAVG;
+	// Params to keep track of actions
+	std::shared_ptr<bool> gettingNewItems;
 
-	std::shared_ptr<int> giveX;
-	std::shared_ptr<int> giveY;
-	std::shared_ptr<int> recvX;
-	std::shared_ptr<int> recvY;
+	/* SET FILE */
+	std::shared_ptr<bool> useAVG;
+	std::shared_ptr<bool> forceShow;
+	std::shared_ptr<string> dataProvider;
+
+	std::shared_ptr<float> tradeX;
+	std::shared_ptr<float> tradeY;
+
 	std::shared_ptr<int> width;
 	std::shared_ptr<int> height;
 
-	std::shared_ptr<TradeValue> tradeValueGive;
-	std::shared_ptr<TradeValue> tradeValueRecv;
+	/* TRADE */
+	bool showTrade = false;
+	TradeValue tradeValueGive;
+	TradeValue tradeValueRecv;
+
+	/* ITEM DROPS */
+	std::list<unsigned long long> itemDrops;
 
 	void registerCvars();
 	void registerHooks();
@@ -46,22 +65,27 @@ public:
 	virtual void onLoad();
 	virtual void onUnload();
 
-	// Custom
 	std::shared_ptr<PriceAPI> api;
-	Item getItem(string id);
 
-	void logPrice(string id, CVarWrapper cvar);
-	void TempTest(string id, CVarWrapper cvar);
-
+	/* TRADE SPECIFIC FUNCTIONS */
 	void tradeStart(TradeWrapper trade);
 	void tradeEnd(TradeWrapper trade);
-
 	void checkPrices(TradeWrapper trade);
 
+	/* ITEM DROP FUNCTIONS */
+	void getNewOnlineItem(ActorWrapper wrap, void* p);
+	void showNewOnlineItem(ActorWrapper wrap, int count);
+	void itemsEnded(ActorWrapper wrap);
+
+	/* TRADEIN FUNCTIONS */
+	// TODO
+
+	/* OTHER STUFF */
 	bool isWindowOpen_ = false;
 	bool isMinimized_ = false;
 	std::string menuTitle_ = "PriceCheck";
 	void Renderer(CanvasWrapper canvas);
+
 	// Inherited via PluginWindow
 	/*
 
