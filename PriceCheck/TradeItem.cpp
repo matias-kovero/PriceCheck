@@ -5,24 +5,23 @@
 PaintPrice TradeItem::GetPrice()
 {
   // Check item attributes
-  itemInfo = this->updateItemInfo();
+  info = this->updateItemInfo();
 
-  if (this->IsBlueprint()) 
-  {
-    Blueprint price = _globalPriceAPI->FindBlueprint(itemInfo.originalID);
-    paint = paintMap[itemInfo.paintID];
+  Item price = this->IsBlueprint() ?
+    _globalPriceAPI->FindBlueprint(info.id) :
+    _globalPriceAPI->FindItem(this->GetProductID());
 
-    auto p = price.data[paint];
-    return p;
-  }
-  else 
-  {
-    Item price = _globalPriceAPI->FindItem(this->GetProductID());
-    paint = paintMap[itemInfo.paintID];
+  return price.data[info.paint];
 
-    auto p = price.data[paint];
-    return p;
-  }
+}
+
+string TradeItem::GetPaint()
+{
+  // Is this needed, I belive need to double check Info has been filled with data.
+  // Could be done when this Class gets created?
+  info = this->updateItemInfo();
+
+  return PaintToString(info.paint);
 }
 
 Info TradeItem::updateItemInfo()
@@ -37,33 +36,39 @@ Info TradeItem::updateItemInfo()
     if (att.Get(i).GetAttributeType() == "ProductAttribute_Blueprint_TA")
     {
       auto pa = ProductAttribute_BlueprintWrapper(att.Get(i).memory_address);
-      itemInfo.originalID = pa.GetProductID();
+      info.id = pa.GetProductID(); // Get the manufactured products id. Used to get price info.
     }
     if (att.Get(i).GetAttributeType() == "ProductAttribute_Quality_TA")
     {
-      // Why all items don't have this?
+      // No usage yet
+      /*
       auto pa = ProductAttribute_QualityWrapper(att.Get(i).memory_address);
-      itemInfo.quality = pa.GetQuality();
+      info.quality = pa.GetQuality();
+      */
     }
     if (att.Get(i).GetAttributeType() == "ProductAttribute_Painted_TA") // Painted
     {
       auto pa = ProductAttribute_PaintedWrapper(att.Get(i).memory_address);
-      itemInfo.paintID = pa.GetPaintID();
+      info.paint = static_cast<ITEMPAINT>(pa.GetPaintID());
     }
     if (att.Get(i).GetAttributeType() == "ProductAttribute_Certified_TA") // Certified
     {
+      // No usage yet
+      /*
       auto pa = ProductAttribute_CertifiedWrapper(att.Get(i).memory_address);
-      auto cert = pa.GetRankLabel().ToString();
-      itemInfo.certified = cert;
+      info.certified = pa.GetRankLabel().ToString();
+      */
     }
-    if (att.Get(i).GetAttributeType() == "ProductAttribute_SpecialEdition_TA") // Is this Obsolete now?
+    if (att.Get(i).GetAttributeType() == "ProductAttribute_SpecialEdition_TA") // Special Editions
     {
+      // No usage yet
+      /*
       auto pa = ProductAttribute_SpecialEditionWrapper(att.Get(i).memory_address);
       auto label = _globalSpecialEditionManager->GetSpecialEditionName(pa.GetEditionID());
       label.replace(0, 8, ""); // Removing "Edition_" from label.
-      itemInfo.editionID = pa.GetEditionID();
-      itemInfo.specialEdition = label;
+      info.specialEdition = label;
+      */
     }
   }
-  return itemInfo;
+  return info;
 }

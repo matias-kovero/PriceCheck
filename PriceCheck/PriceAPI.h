@@ -1,12 +1,6 @@
 #pragma once
-#include <string>
-#include <vector>
-
 #include "bakkesmod/wrappers/cvarmanagerwrapper.h"
 #include "bakkesmod/wrappers/gamewrapper.h"
-
-#include "nlohmann/json.hpp"
-#include "httplib.h"
 
 #include "APIClasses.h"
 
@@ -18,7 +12,6 @@ class PriceAPI
 {
 public:
 	PriceAPI(std::shared_ptr<CVarManagerWrapper> _cvar, std::shared_ptr<GameWrapper> _gw);
-	std::map<string, Item> priceData; // Is this even mandatory??
 	string lastUpdated;
 
 	void LoadData();
@@ -28,11 +21,11 @@ public:
 	Item FindItem(string id);
 	Item FindItem(int id);
 
-	Blueprint FindBlueprint(string id);
-	Blueprint FindBlueprint(int id);
+	Item FindBlueprint(string id);
+	Item FindBlueprint(int id);
 
 private:
-	std::map<string, Blueprint> _blueprintData;
+	std::map<string, Item> _blueprintData;
 	std::map<string, Item> _priceData;
 
 	std::shared_ptr<CVarManagerWrapper> _cvar;

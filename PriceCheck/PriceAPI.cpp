@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "APIClasses.h"
 #include "PriceAPI.h"
+#include "defines.h"
 
 /// <summary>
 /// Initially load data from our backend.
@@ -9,10 +10,9 @@
 void PriceAPI::LoadData()
 {
 	thread t([this]() {
-		string url = "/api/insider/pc";
+		string url = "/insider/pc";
 		_fetching = true;
 		cli.set_follow_location(true);
-
 		auto res = cli.Get(url.c_str());
 		if (res && res->status == 200)
 		{
@@ -76,7 +76,7 @@ Item PriceAPI::FindItem(int id)
 	return FindItem(std::to_string(id));
 }
 
-Blueprint PriceAPI::FindBlueprint(string id)
+Item PriceAPI::FindBlueprint(string id)
 {
 	auto it = _blueprintData.find(id);
 	if (it != _blueprintData.end())
@@ -86,14 +86,14 @@ Blueprint PriceAPI::FindBlueprint(string id)
 	else 
 	{
 		_gw->Toast("PriceCheck", "Can't find price info for blueprint: " + id );
-		_blueprintData[id] = Blueprint();
+		_blueprintData[id] = Item();
 		return _blueprintData[id];
 	}
 	_gw->Toast("PriceCheck", "Entäs Tarmon lähikaupat");
-	return Blueprint();
+	return Item();
 }
 
-Blueprint PriceAPI::FindBlueprint(int id)
+Item PriceAPI::FindBlueprint(int id)
 {
 	return FindBlueprint(std::to_string(id));
 }
@@ -136,8 +136,12 @@ bool PriceAPI::CheckTimeStamp(intmax_t last_update)
 	return duration_cast<hours>(elapsed).count() >= 1;
 }
 
-PriceAPI::PriceAPI(std::shared_ptr<CVarManagerWrapper> cvar, std::shared_ptr<GameWrapper> gw) : cli("bm-proxy-test.vercel.app"), _cvar(cvar), _gw(gw)
+PriceAPI::PriceAPI(std::shared_ptr<CVarManagerWrapper> cvar, std::shared_ptr<GameWrapper> gw) : cli("pricecheck-server.herokuapp.com"), _cvar(cvar), _gw(gw)
 {
+	// To save bandwidth use compression
+	cli.set_default_headers({
+		{ "Accept-Encoding", "gzip, deflate" }
+	});
 	SetUpParser();
 }
 
@@ -153,8 +157,6 @@ PriceAPI::PriceAPI(std::shared_ptr<CVarManagerWrapper> cvar, std::shared_ptr<Gam
 void PriceAPI::OnLoadData(APIData res)
 {
 	using namespace std::chrono;
-	// Public data isn't used in code? Need to check if deprecate.d
-	priceData = res.items;
 
 	_priceData = res.items;
 	_blueprintData = res.prints;
@@ -171,7 +173,7 @@ void PriceAPI::OnLoadData(APIData res)
 	else
 		lastUpdated = " updated ~ " + std::to_string(duration_cast<hours>(elapsed).count()) + "h ago.";
 
-	_cvar->getCvar("pc_data_status").setValue(lastUpdated);
+	_cvar->getCvar(CVAR_DATA_STATUS).setValue(lastUpdated);
 }
 
 /// <summary>
@@ -187,5 +189,6 @@ void PriceAPI::OnResponseError()
 			"Unable to get price data...\nPlease try again later.", 
 			"default", 8.5F
 		);
+		_cvar->getCvar(CVAR_DATA_STATUS).setValue(" error, please try again later.");
 	}
 }

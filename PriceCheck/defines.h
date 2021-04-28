@@ -25,5 +25,9 @@
 #define HOOK_PENDING_DROP "Function TAGame.GFxData_MultiItemDrops_TA.GetPendingDropCount" // When item drop is visible on screen
 #define HOOK_DROPS_ENDED "Function TAGame.GFxData_MultiItemDrops_TA.PlayerAllDropsHandled" // Item drops have ended -> clean-up
 
+/* TRADE-IN HOOKS */
+#define HOOK_TRADE_IN_UPDATE "Function TAGame.GFxData_ProductTradeIn_TA.UpdateTradeInQuantity" // When items are changed in tradeIn
+#define HOOK_TRADE_IN_DONE "Function TAGame.GFxData_ProductTradeIn_TA.HandleTradeInComplete"
+
 /* CAPSULE OPENING */
 #define HOOK_SHOW_NEW_ITEM "Function TAGame.PremiumGaragePreviewSet_TA.OnRevealFinished"

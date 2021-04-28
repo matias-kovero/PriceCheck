@@ -2,10 +2,8 @@
 #include "PriceCheck.h"
 #include "TradeItem.h"
 #include "bakkesmod/wrappers/items/TradeWrapper.h"
+#include "bakkesmod/wrappers/items/ProductTradeInWrapper.h"
 #include "defines.h"
-
-// Container/Capsule item revelead?
-#define HOOK_SHOW_NEW_ITEM "Function TAGame.PremiumGaragePreviewSet_TA.OnRevealFinished"
 
 BAKKESMOD_PLUGIN(PriceCheck, "Check item prices.", plugin_version, PLUGINTYPE_FREEPLAY)
 
@@ -58,7 +56,7 @@ void PriceCheck::registerHooks()
 	gameWrapper->HookEventWithCallerPost<TradeWrapper>(HOOK_TRADE_CHANGE,
 		[this](TradeWrapper caller, void* params, std::string eventName) { checkPrices(caller); });
 
-	/* FOR FUTURE RELEASE */
+	/* THESE ARE NOT YET READY FOR RELEASE, NOT HOOKING THEM YET */
 	/*
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>(HOOK_NEW_ITEM,
 		[this](ActorWrapper caller, void* params, std::string eventName) { 
@@ -87,6 +85,9 @@ void PriceCheck::registerHooks()
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>(HOOK_DROPS_ENDED,
 		[this](ActorWrapper caller, void* params, std::string eventName) { itemsEnded(caller); });
 
+	gameWrapper->HookEventWithCallerPost<ProductTradeInWrapper>(HOOK_TRADE_IN_UPDATE,
+		[this](ProductTradeInWrapper caller, void* params, std::string eventName) { checkPrices(caller); });
+
 	*/
 }
 
@@ -113,9 +114,6 @@ void PriceCheck::onLoad()
 
 	width = std::make_shared<int>(true);
 	height = std::make_shared<int>(true);
-
-	/* PLUGIN STATE */
-	//showTrade = std::make_shared<bool>(false);
 
 	/* MISC STUFF */
 	registerHooks();
@@ -233,10 +231,10 @@ void PriceCheck::showNewOnlineItem(ActorWrapper wrap, int count)
 {
 	cvarManager->log("itemDrops: (" + std::to_string(itemDrops.size()) + "), count: (" + std::to_string(count) + ")");
 
-	if (!itemDrops.empty() && itemDrops.size() == count)
+	if (!itemDrops.empty() && itemDrops.size() >= count)
 	{
 		cvarManager->log("Vector len: (" + std::to_string(itemDrops.size()) + ")");
-		auto id = itemDrops.front();
+		unsigned long long id = itemDrops.front();
 		TradeItem i = gameWrapper->GetItemsWrapper().GetOnlineProduct(id);
 		if (!i) 
 		{
@@ -244,11 +242,12 @@ void PriceCheck::showNewOnlineItem(ActorWrapper wrap, int count)
 			return;
 		}
 
-		auto price = i.GetPrice();
+		PaintPrice price = i.GetPrice();
+		string paint = i.GetPaint();
 
 		gameWrapper->Toast("New Item",
 			i.GetLongLabel().ToString() + 
-			(i.paint != "default" ? " (" + i.paint + ")" : "") +
+			(paint != "" ? " (" + paint + ")" : "") +
 			"\n" + std::to_string(price.min) + " - " + std::to_string(price.max),
 			"default", 4.5F
 		);
@@ -264,6 +263,27 @@ void PriceCheck::itemsEnded(ActorWrapper wrap)
 {
 	itemDrops.clear();
 	cvarManager->log("User has seen all items.");
+}
+
+void PriceCheck::checkPrices(ProductTradeInWrapper tradeIn)
+{
+	if (tradeIn.IsNull())
+	{
+		cvarManager->log("Null trade-in");
+		return;
+	}
+	tradeInValue = TradeValue();
+	ArrayWrapper<OnlineProductWrapper> items = tradeIn.GetProducts();
+
+	cvarManager->log("User is trading in " + std::to_string(items.Count()) + " items.");
+
+	for (TradeItem i : items) 
+	{
+		PaintPrice price = i.GetPrice();
+		tradeInValue.min += price.min;
+		tradeInValue.max += price.max;
+	}
+	cvarManager->log("Trade-In valuation: " + std::to_string(tradeInValue.min) + " - " + std::to_string(tradeInValue.max));
 }
 
 void PriceCheck::Renderer(CanvasWrapper canvas)

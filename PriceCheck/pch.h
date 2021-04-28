@@ -1,6 +1,10 @@
 #pragma once
+#pragma comment(lib, "libcrypto.lib")
+#pragma comment(lib, "libssl.lib")
+#pragma comment(lib, "zlib.lib")
 
 #define CPPHTTPLIB_OPENSSL_SUPPORT
+#define CPPHTTPLIB_ZLIB_SUPPORT
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS
 #include <httplib.h>
@@ -22,6 +26,12 @@
 extern std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 extern std::shared_ptr<PriceAPI> _globalPriceAPI;
 extern std::shared_ptr<SpecialEditionDatabaseWrapper> _globalSpecialEditionManager;
+
+struct HandleNewOnlineItemParam
+{
+  void* no_touch;
+  uintptr_t online_product_ptr;
+};
 
 struct DropParams
 {

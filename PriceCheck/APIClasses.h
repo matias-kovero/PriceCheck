@@ -1,11 +1,26 @@
 #pragma once
-#include <string>
-#include <vector>
-
 #include "nlohmann/json.hpp"
 
 using string = std::string;
 using json = nlohmann::json;
+
+enum class ITEMPAINT
+{
+  DEFAULT = 0,
+  CRIMSON = 1,
+  LIME = 2,
+  BLACK = 3,
+  SKYBLUE = 4,
+  COBALT = 5,
+  BURNTSIENNA = 6,
+  FORESTGREEN = 7,
+  PURPLE = 8,
+  PINK = 9,
+  ORANGE = 10,
+  GREY = 11,
+  TITANIUMWHITE = 12,
+  SAFFRON = 13
+};
 
 struct PaintPrice
 {
@@ -16,38 +31,21 @@ struct PaintPrice
 struct Item
 {
   string id;
-  bool isError;
-  intmax_t last_refresh;
-  std::map<string, PaintPrice> data;
-};
-
-struct Blueprint
-{
-  string id;
-  bool isError;
-  intmax_t last_refresh;
-  std::map<string, PaintPrice> data;
+  bool isError = false;
+  intmax_t last_refresh = 0;
+  std::map<ITEMPAINT, PaintPrice> data;
 };
 
 struct APIData
 {
   bool isError;
-  int count;
   intmax_t last_refresh;
   std::map<string, Item> items;
-  std::map<string, Blueprint> prints;
+  std::map<string, Item> prints;
 };
 
-struct APIResponse
-{
-  int count;
-  intmax_t last_refresh;
-  bool isError;
-  std::map<string, Item> data;
-};
+string PaintToString(ITEMPAINT paint);
 
 void from_json(const json j, PaintPrice& p);
 void from_json(const json j, Item& i);
-void from_json(const json j, Blueprint& b);
 void from_json(const json j, APIData& d);
-void from_json(const json j, APIResponse& r);

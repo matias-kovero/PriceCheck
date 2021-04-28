@@ -1,25 +1,9 @@
 #pragma once
-
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include "bakkesmod/plugin/pluginwindow.h"
-
-#include "PriceAPI.h"
-
 #include "version.h"
 
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
-
-/*
-* !! KNOWLEDGE !!
-*
-* RS: https://www.youtube.com/watch?v=t-5SGaunD_s
-*/
-
-struct HandleNewOnlineItemParam
-{
-	void* no_touch;
-	uintptr_t online_product_ptr;
-};
 
 struct TradeValue
 {
@@ -54,6 +38,10 @@ private:
 	TradeValue tradeValueGive;
 	TradeValue tradeValueRecv;
 
+	/* TRADE-IN */
+	bool showTradeIn = false;
+	TradeValue tradeInValue;
+
 	/* ITEM DROPS */
 	std::list<unsigned long long> itemDrops;
 
@@ -61,13 +49,12 @@ private:
 	void registerHooks();
 
 public:
-	//Boilerplate
 	virtual void onLoad();
 	virtual void onUnload();
 
 	std::shared_ptr<PriceAPI> api;
 
-	/* TRADE SPECIFIC FUNCTIONS */
+	/* TRADE FUNCTIONS */
 	void tradeStart(TradeWrapper trade);
 	void tradeEnd(TradeWrapper trade);
 	void checkPrices(TradeWrapper trade);
@@ -77,7 +64,8 @@ public:
 	void showNewOnlineItem(ActorWrapper wrap, int count);
 	void itemsEnded(ActorWrapper wrap);
 
-	/* TRADEIN FUNCTIONS */
+	/* TRADE-IN FUNCTIONS */
+	void checkPrices(ProductTradeInWrapper tradeIn);
 	// TODO
 
 	/* OTHER STUFF */
@@ -85,22 +73,4 @@ public:
 	bool isMinimized_ = false;
 	std::string menuTitle_ = "PriceCheck";
 	void Renderer(CanvasWrapper canvas);
-
-	// Inherited via PluginWindow
-	/*
-
-	bool isWindowOpen_ = false;
-	bool isMinimized_ = false;
-	std::string menuTitle_ = "PriceCheck";
-
-	virtual void Render() override;
-	virtual std::string GetMenuName() override;
-	virtual std::string GetMenuTitle() override;
-	virtual void SetImGuiContext(uintptr_t ctx) override;
-	virtual bool ShouldBlockInput() override;
-	virtual bool IsActiveOverlay() override;
-	virtual void OnOpen() override;
-	virtual void OnClose() override;
-	
-	*/
 };
