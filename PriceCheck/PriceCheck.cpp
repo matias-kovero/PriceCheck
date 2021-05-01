@@ -57,7 +57,7 @@ void PriceCheck::registerHooks()
 		[this](TradeWrapper caller, void* params, std::string eventName) { checkPrices(caller); });
 
 	/* THESE ARE NOT YET READY FOR RELEASE, NOT HOOKING THEM YET */
-	/*
+	
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>(HOOK_NEW_ITEM,
 		[this](ActorWrapper caller, void* params, std::string eventName) { 
 			cvarManager->log(eventName);
@@ -88,7 +88,6 @@ void PriceCheck::registerHooks()
 	gameWrapper->HookEventWithCallerPost<ProductTradeInWrapper>(HOOK_TRADE_IN_UPDATE,
 		[this](ProductTradeInWrapper caller, void* params, std::string eventName) { checkPrices(caller); });
 
-	*/
 }
 
 void PriceCheck::onLoad()
