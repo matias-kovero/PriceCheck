@@ -10,12 +10,15 @@ struct Info
 class TradeItem : public OnlineProductWrapper
 {
 public:
-  TradeItem(const OnlineProductWrapper& i) : OnlineProductWrapper(i) {}
+  TradeItem(const OnlineProductWrapper& i) : OnlineProductWrapper(i) { m_info = updateItemInfo(); }
 
   PaintPrice GetPrice();
-	string GetPaint();
+  string GetPaint();
+  COLOR GetPaintColor();
+  string GetSeries();
 
 private:
-  Info info = Info();
+  Info m_info = Info();
   Info updateItemInfo();
+  string ToSeriesString(const int& id);
 };

@@ -2,21 +2,12 @@
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include "bakkesmod/plugin/pluginwindow.h"
 #include "version.h"
+#include "classes/TradeIn.h"
+#include "classes/PlayerTrade.h"
 
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
-struct TradeValue
-{
-	int min = 0;
-	int max = 0;
-};
-
-enum Currencies
-{
-	Credits = 13
-};
-
-class PriceCheck: public BakkesMod::Plugin::BakkesModPlugin/*, public BakkesMod::Plugin::PluginWindow*/
+class PriceCheck: public BakkesMod::Plugin::BakkesModPlugin, public BakkesMod::Plugin::PluginWindow
 {
 private:
 	// Params to keep track of actions
@@ -29,18 +20,19 @@ private:
 
 	std::shared_ptr<float> tradeX;
 	std::shared_ptr<float> tradeY;
+	std::shared_ptr<float> tradeInX;
+	std::shared_ptr<float> tradeInY;
 
 	std::shared_ptr<int> width;
 	std::shared_ptr<int> height;
 
 	/* TRADE */
 	bool showTrade = false;
-	TradeValue tradeValueGive;
-	TradeValue tradeValueRecv;
+	PlayerTrade playerTrade = PlayerTrade();
 
 	/* TRADE-IN */
 	bool showTradeIn = false;
-	TradeValue tradeInValue;
+	TradeIn tradeIn = TradeIn();
 
 	/* ITEM DROPS */
 	std::list<unsigned long long> itemDrops;
@@ -65,12 +57,26 @@ public:
 	void itemsEnded(ActorWrapper wrap);
 
 	/* TRADE-IN FUNCTIONS */
-	void checkPrices(ProductTradeInWrapper tradeIn);
-	// TODO
+	void checkPrices(ProductTradeInWrapper wrap);
+	void tradeInEnded(ProductTradeInWrapper wrap);
 
-	/* OTHER STUFF */
+	/* RENDERER STUFF */
+	void Renderer(CanvasWrapper canvas);
+	void RenderTrade(CanvasWrapper canvas);
+
+	// Inherited via PluginWindow
+	
+	/* IMGUI STUFF */
 	bool isWindowOpen_ = false;
 	bool isMinimized_ = false;
 	std::string menuTitle_ = "PriceCheck";
-	void Renderer(CanvasWrapper canvas);
+
+	virtual void Render() override;
+	virtual std::string GetMenuName() override;
+	virtual std::string GetMenuTitle() override;
+	virtual void SetImGuiContext(uintptr_t ctx) override;
+	virtual bool ShouldBlockInput() override;
+	virtual bool IsActiveOverlay() override;
+	virtual void OnOpen() override;
+	virtual void OnClose() override;
 };

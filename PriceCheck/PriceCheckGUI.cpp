@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "PriceCheck.h"
 
-/*
+
 // Do ImGui rendering here
 void PriceCheck::Render()
 {
@@ -11,9 +11,12 @@ void PriceCheck::Render()
 		ImGui::End();
 		return;
 	}
+	//ImGui::Begin(menuTitle_.c_str(), &isWindowOpen_, ImGuiWindowFlags_NoTitleBar);
+	static bool cb = false;
+	ImGui::Checkbox("Toggle", &cb);
 
+	// ImGui renreding ends here
 	ImGui::End();
-
 	if (!isWindowOpen_)
 	{
 		cvarManager->executeCommand("togglemenu " + GetMenuName());
@@ -53,7 +56,17 @@ bool PriceCheck::IsActiveOverlay()
 // Called when window is opened
 void PriceCheck::OnOpen()
 {
+	//ImGui::SetNextWindowBgAlpha(1);
 	isWindowOpen_ = true;
+	//ImGuiStyle& style = ImGui::GetStyle();
+	//auto& c = style.Colors[ImGuiCol_WindowBg];
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.7f));
+	ImGui::PushStyleVar(ImGuiWindowFlags_NoTitleBar, 0);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(-1, -1));
+	//ImGuiStyleVar_
+	//ImGuiStyle& style = ImGui::GetStyle();
+	//style.Colors[ImGuiCol_WindowBg] = ImColor(30, 30, 30, 50);
+	//ImGui::SetNextWindowBgAlpha(1);
 }
 
 // Called when window is closed
@@ -61,4 +74,3 @@ void PriceCheck::OnClose()
 {
 	isWindowOpen_ = false;
 }
-*/

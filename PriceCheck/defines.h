@@ -8,8 +8,8 @@
 #define CVAR_GIVE_Y "pc_trade_y"
 #define CVAR_FORCE_SHOW "pc_force_show"
 
-#define CVAR_RECV_X "pc_recv_x"
-#define CVAR_RECV_Y "pc_recv_y"
+#define CVAR_TRADE_IN_X "pc_tradein_x"
+#define CVAR_TRADE_IN_Y "pc_tradein_y"
 
 #define CVAR_HEIGHT "pc_height"
 #define CVAR_WIDTH "pc_width"
@@ -28,6 +28,9 @@
 /* TRADE-IN HOOKS */
 #define HOOK_TRADE_IN_UPDATE "Function TAGame.GFxData_ProductTradeIn_TA.UpdateTradeInQuantity" // When items are changed in tradeIn
 #define HOOK_TRADE_IN_DONE "Function TAGame.GFxData_ProductTradeIn_TA.HandleTradeInComplete"
+#define HOOK_TRADE_IN_CLOSE "Function TAGame.GFxData_ProductTradeIn_TA.CancelTradeIn"
 
 /* CAPSULE OPENING */
-#define HOOK_SHOW_NEW_ITEM "Function TAGame.PremiumGaragePreviewSet_TA.OnRevealFinished"
+#define HOOK_CAPSULE_START_SESSION "Function TAGame.PremiumGaragePreviewSet_TA.EnterPremiumGarage" // When user enters capsule opening
+#define HOOK_CAPSULE_END_SESSION "Function TAGame.PremiumGaragePreviewSet_TA.ExitPremiumGarage" // When users leaves capsule opening
+#define HOOK_SHOW_NEW_ITEM "Function TAGame.PremiumGaragePreviewSet_TA.OnRevealFinished" // When user sees what item he got

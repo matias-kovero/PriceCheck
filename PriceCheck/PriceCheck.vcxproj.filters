@@ -22,6 +22,20 @@
     <Filter Include="imgui\implementation">
       <UniqueIdentifier>{d46c4711-0bdc-484c-bb4c-5526d80f7f5e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\classes">
+      <UniqueIdentifier>{47ec84bb-5d00-4dea-9957-af1404628565}</UniqueIdentifier>
+      <Extensions>
+      </Extensions>
+    </Filter>
+    <Filter Include="Header Files\classes">
+      <UniqueIdentifier>{de065a08-2733-41c5-a5d6-c241392b78f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\api">
+      <UniqueIdentifier>{2267eb98-b403-4e38-bc0c-f6f04f225e76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\api">
+      <UniqueIdentifier>{1d6d38ba-c83c-41e9-9e2f-d6c8d2c92489}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PriceCheck.cpp">
@@ -72,14 +86,20 @@
     <ClCompile Include="fmt\src\os.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PriceAPI.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TradeItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="APIClasses.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="classes\PlayerTrade.cpp">
+      <Filter>Source Files\classes</Filter>
+    </ClCompile>
+    <ClCompile Include="api\APIClasses.cpp">
+      <Filter>Source Files\api</Filter>
+    </ClCompile>
+    <ClCompile Include="api\PriceAPI.cpp">
+      <Filter>Source Files\api</Filter>
+    </ClCompile>
+    <ClCompile Include="classes\TradeIn.cpp">
+      <Filter>Source Files\classes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -131,17 +151,23 @@
     <ClInclude Include="version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PriceAPI.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TradeItem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="APIClasses.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="defines.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="classes\PlayerTrade.h">
+      <Filter>Header Files\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="api\APIClasses.h">
+      <Filter>Header Files\api</Filter>
+    </ClInclude>
+    <ClInclude Include="api\PriceAPI.h">
+      <Filter>Header Files\api</Filter>
+    </ClInclude>
+    <ClInclude Include="classes\TradeIn.h">
+      <Filter>Header Files\classes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -78,7 +78,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>$(ProjectDir)fmt\include;$(ProjectDir)Third-Party\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)fmt\include;$(ProjectDir)Third-Party\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -93,7 +93,10 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="APIClasses.cpp" />
+    <ClCompile Include="api\APIClasses.cpp" />
+    <ClCompile Include="api\PriceAPI.cpp" />
+    <ClCompile Include="classes\PlayerTrade.cpp" />
+    <ClCompile Include="classes\TradeIn.cpp" />
     <ClCompile Include="fmt\src\format.cc" />
     <ClCompile Include="fmt\src\os.cc" />
     <ClCompile Include="imgui\imgui.cpp" />
@@ -112,12 +115,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="PriceAPI.cpp" />
     <ClCompile Include="PriceCheck.cpp" />
     <ClCompile Include="PriceCheckGUI.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="APIClasses.h" />
+    <ClInclude Include="api\APIClasses.h" />
+    <ClInclude Include="api\PriceAPI.h" />
+    <ClInclude Include="classes\PlayerTrade.h" />
+    <ClInclude Include="classes\TradeIn.h" />
     <ClInclude Include="defines.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
@@ -134,7 +139,6 @@
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="TradeItem.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="PriceAPI.h" />
     <ClInclude Include="PriceCheck.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>
