@@ -1,7 +1,4 @@
-#pragma once
-#include "bakkesmod/wrappers/cvarmanagerwrapper.h"
-#include "bakkesmod/wrappers/gamewrapper.h"
-
+#include <nlohmann/json.hpp>
 #include "APIClasses.h"
 
 using json = nlohmann::json;

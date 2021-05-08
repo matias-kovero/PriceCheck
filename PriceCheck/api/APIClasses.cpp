@@ -40,12 +40,7 @@ ITEMPAINT ToItemPaint(const string& id)
   }
   throw std::invalid_argument("Argument to paint mapping is unknown");
 }
-/// <summary>
-/// Currently no need in production code.
-/// String paints aren't used anywhere else but development logging.
-/// </summary>
-/// <param name="paint"></param>
-/// <returns>Paint name as seen in Rocket League</returns>
+
 string PaintToString(ITEMPAINT paint)
 {
   switch (paint) 
@@ -80,6 +75,42 @@ string PaintToString(ITEMPAINT paint)
     return "Saffron";
   }
   return "???";
+}
+
+COLOR PaintToRGB(ITEMPAINT paint)
+{
+  switch (paint)
+  {
+  case ITEMPAINT::DEFAULT:
+    return {0,0,0};
+  case ITEMPAINT::CRIMSON:
+    return { 164,22,22 };
+  case ITEMPAINT::LIME:
+    return { 144,255,17 };
+  case ITEMPAINT::BLACK:
+    return { 0,0,0 };
+  case ITEMPAINT::SKYBLUE:
+    return { 22,142,221 };
+  case ITEMPAINT::COBALT:
+    return { 24,54,255 };
+  case ITEMPAINT::BURNTSIENNA:
+    return { 93,32,17 };
+  case ITEMPAINT::FORESTGREEN:
+    return { 25,143,25 };
+  case ITEMPAINT::PURPLE:
+    return { 87,20,151 };
+  case ITEMPAINT::PINK:
+    return { 213,60,162 };
+  case ITEMPAINT::ORANGE:
+    return { 255,85,9 };
+  case ITEMPAINT::GREY:
+    return { 72,72,72 };
+  case ITEMPAINT::TITANIUMWHITE:
+    return { 255,255,255 };
+  case ITEMPAINT::SAFFRON:
+    return { 215,211,24 };
+  }
+  return COLOR();
 }
 
 void from_json(const json j, PaintPrice& p)

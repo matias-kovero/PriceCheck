@@ -10,7 +10,7 @@
 #include <httplib.h>
 
 #include "bakkesmod/plugin/bakkesmodplugin.h"
-#include "PriceAPI.h"
+#include "api/PriceAPI.h"
 
 #include <string>
 #include <vector>

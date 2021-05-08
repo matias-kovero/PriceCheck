@@ -22,6 +22,13 @@ enum class ITEMPAINT
   SAFFRON = 13
 };
 
+struct COLOR
+{
+  int r = 0;
+  int g = 0;
+  int b = 0;
+};
+
 struct PaintPrice
 {
   int min = 0;
@@ -45,6 +52,7 @@ struct APIData
 };
 
 string PaintToString(ITEMPAINT paint);
+COLOR PaintToRGB(ITEMPAINT paint);
 
 void from_json(const json j, PaintPrice& p);
 void from_json(const json j, Item& i);

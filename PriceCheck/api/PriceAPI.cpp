@@ -1,7 +1,6 @@
 #include "pch.h"
-#include "APIClasses.h"
-#include "PriceAPI.h"
 #include "defines.h"
+#include "APIClasses.h"
 
 /// <summary>
 /// Initially load data from our backend.
@@ -63,7 +62,7 @@ Item PriceAPI::FindItem(string id)
 		Item i = _priceData[id];
 		FetchItem(id);
 		*/
-		_gw->Toast("PriceCheck", "Can't find price info for item: " + id);
+		_gw->Toast("PriceCheck", "Unable to find price info for item.", "pricecheck_logo", 3.5f, ToastType_Warning);
 		_priceData[id] = Item();
 		return _priceData[id];
 	}
