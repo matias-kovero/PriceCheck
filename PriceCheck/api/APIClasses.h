@@ -27,6 +27,7 @@ struct COLOR
   int r = 0;
   int g = 0;
   int b = 0;
+  int a = 255;
 };
 
 struct PaintPrice
@@ -53,6 +54,7 @@ struct APIData
 
 string PaintToString(ITEMPAINT paint);
 COLOR PaintToRGB(ITEMPAINT paint);
+COLOR QualityToRGB(int quality);
 
 void from_json(const json j, PaintPrice& p);
 void from_json(const json j, Item& i);

@@ -2,29 +2,34 @@
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include "bakkesmod/plugin/pluginwindow.h"
 #include "version.h"
+
 #include "classes/TradeIn.h"
 #include "classes/PlayerTrade.h"
+#include "classes/HoverItem.h"
+#include "classes/ItemSeries.h"
+#include "gui/Fonts.h"
 
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
+
+struct GuiState
+{
+	bool showTrade = false;
+	bool showTradeIn = false;
+	bool showInventory = false;
+};
 
 class PriceCheck: public BakkesMod::Plugin::BakkesModPlugin, public BakkesMod::Plugin::PluginWindow
 {
 private:
 	// Params to keep track of actions
-	std::shared_ptr<bool> gettingNewItems;
+	//std::shared_ptr<bool> gettingNewItems;
 
 	/* SET FILE */
 	std::shared_ptr<bool> useAVG;
 	std::shared_ptr<bool> forceShow;
 	std::shared_ptr<string> dataProvider;
 
-	std::shared_ptr<float> tradeX;
-	std::shared_ptr<float> tradeY;
-	std::shared_ptr<float> tradeInX;
-	std::shared_ptr<float> tradeInY;
-
-	std::shared_ptr<int> width;
-	std::shared_ptr<int> height;
+	GuiState guiState;
 
 	/* TRADE */
 	bool showTrade = false;
@@ -33,12 +38,20 @@ private:
 	/* TRADE-IN */
 	bool showTradeIn = false;
 	TradeIn tradeIn = TradeIn();
+	ItemSeriesDatabaseWrapper itemSeriesDatabaseWrapper = ItemSeriesDatabaseWrapper();
 
 	/* ITEM DROPS */
 	std::list<unsigned long long> itemDrops;
 
+	/* INVETORY ITEM */
+	bool showInventory = false;
+	HoverItem hoverItem = HoverItem();
+
 	void registerCvars();
 	void registerHooks();
+
+	void StartRender();
+	void StopRender();
 
 public:
 	virtual void onLoad();
@@ -59,10 +72,10 @@ public:
 	/* TRADE-IN FUNCTIONS */
 	void checkPrices(ProductTradeInWrapper wrap);
 	void tradeInEnded(ProductTradeInWrapper wrap);
+	void checkSeriesItems(string cvarName, CVarWrapper newCvar);
 
-	/* RENDERER STUFF */
-	void Renderer(CanvasWrapper canvas);
-	void RenderTrade(CanvasWrapper canvas);
+	/* INVETORY ITEM */
+	void showInvetoryItem(OnlineProductWrapper wrap);
 
 	// Inherited via PluginWindow
 	
@@ -70,6 +83,10 @@ public:
 	bool isWindowOpen_ = false;
 	bool isMinimized_ = false;
 	std::string menuTitle_ = "PriceCheck";
+	Fonts fonts = Fonts();
+
+	virtual void DrawTradeWindow();
+	virtual void DrawTradeInWindow();
 
 	virtual void Render() override;
 	virtual std::string GetMenuName() override;
@@ -77,6 +94,7 @@ public:
 	virtual void SetImGuiContext(uintptr_t ctx) override;
 	virtual bool ShouldBlockInput() override;
 	virtual bool IsActiveOverlay() override;
+
 	virtual void OnOpen() override;
 	virtual void OnClose() override;
 };

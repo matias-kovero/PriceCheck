@@ -113,6 +113,32 @@ COLOR PaintToRGB(ITEMPAINT paint)
   return COLOR();
 }
 
+COLOR QualityToRGB(int quality)
+{
+  switch (quality)
+  {
+  case 0:
+    return { 0,0,0 }; // 
+  case 1:
+    return { 54, 85, 99 }; // Uncommon
+  case 2:
+    return { 59, 77, 116 }; // Rare
+  case 3:
+    return { 56, 49, 88 }; // Very Rare
+  case 4:
+    return { 104, 27, 27 }; // Import
+  case 5:
+    return { 181, 165, 64 }; // Exotic
+  case 6:
+    return { 143, 26, 191 }; // Black Market
+  case 7:
+    return { 25,143,25 }; // ??
+  case 8:
+    return { 125, 72, 49 }; // Limited
+  }
+  return COLOR();
+}
+
 void from_json(const json j, PaintPrice& p)
 {
   try 
@@ -140,6 +166,7 @@ void from_json(const json j, Item& p)
     for (auto& [id, prices] : tmp_data)
     {
       auto item_paint = ToItemPaint(id);
+      p.id = id; // For some reason this is not set.
       p.data[item_paint] = prices;
     }
   }

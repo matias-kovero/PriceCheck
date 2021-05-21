@@ -24,6 +24,7 @@
 #include "fmt/ranges.h"
 
 extern std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
+extern std::shared_ptr<GameWrapper> _globalGameWrapper;
 extern std::shared_ptr<PriceAPI> _globalPriceAPI;
 extern std::shared_ptr<SpecialEditionDatabaseWrapper> _globalSpecialEditionManager;
 

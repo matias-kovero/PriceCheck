@@ -36,6 +36,12 @@
     <Filter Include="Header Files\api">
       <UniqueIdentifier>{1d6d38ba-c83c-41e9-9e2f-d6c8d2c92489}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\gui">
+      <UniqueIdentifier>{f089cf4c-ce10-4301-871b-e0901f64c2e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\gui">
+      <UniqueIdentifier>{e73098d0-f7e3-4429-b89a-7a14ea58d1b6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PriceCheck.cpp">
@@ -77,9 +83,6 @@
     <ClCompile Include="imgui\imguivariouscontrols.cpp">
       <Filter>imgui\implementation</Filter>
     </ClCompile>
-    <ClCompile Include="PriceCheckGUI.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="fmt\src\format.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -100,6 +103,21 @@
     </ClCompile>
     <ClCompile Include="classes\TradeIn.cpp">
       <Filter>Source Files\classes</Filter>
+    </ClCompile>
+    <ClCompile Include="classes\HoverItem.cpp">
+      <Filter>Source Files\classes</Filter>
+    </ClCompile>
+    <ClCompile Include="classes\ItemSeries.cpp">
+      <Filter>Source Files\classes</Filter>
+    </ClCompile>
+    <ClCompile Include="gui\Fonts.cpp">
+      <Filter>Source Files\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="gui\GUITools.cpp">
+      <Filter>Source Files\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="gui\PriceCheckGUI.cpp">
+      <Filter>Source Files\gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -168,6 +186,18 @@
     </ClInclude>
     <ClInclude Include="classes\TradeIn.h">
       <Filter>Header Files\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="classes\HoverItem.h">
+      <Filter>Header Files\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="classes\ItemSeries.h">
+      <Filter>Header Files\classes</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\Fonts.h">
+      <Filter>Header Files\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\GUITools.h">
+      <Filter>Header Files\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -95,10 +95,15 @@
   <ItemGroup>
     <ClCompile Include="api\APIClasses.cpp" />
     <ClCompile Include="api\PriceAPI.cpp" />
+    <ClCompile Include="classes\HoverItem.cpp" />
+    <ClCompile Include="classes\ItemSeries.cpp" />
     <ClCompile Include="classes\PlayerTrade.cpp" />
     <ClCompile Include="classes\TradeIn.cpp" />
     <ClCompile Include="fmt\src\format.cc" />
     <ClCompile Include="fmt\src\os.cc" />
+    <ClCompile Include="gui\Fonts.cpp" />
+    <ClCompile Include="gui\GUITools.cpp" />
+    <ClCompile Include="gui\PriceCheckGUI.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imguivariouscontrols.cpp" />
     <ClCompile Include="imgui\imgui_additions.cpp" />
@@ -116,14 +121,17 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="PriceCheck.cpp" />
-    <ClCompile Include="PriceCheckGUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api\APIClasses.h" />
     <ClInclude Include="api\PriceAPI.h" />
+    <ClInclude Include="classes\HoverItem.h" />
+    <ClInclude Include="classes\ItemSeries.h" />
     <ClInclude Include="classes\PlayerTrade.h" />
     <ClInclude Include="classes\TradeIn.h" />
     <ClInclude Include="defines.h" />
+    <ClInclude Include="gui\Fonts.h" />
+    <ClInclude Include="gui\GUITools.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imguivariouscontrols.h" />

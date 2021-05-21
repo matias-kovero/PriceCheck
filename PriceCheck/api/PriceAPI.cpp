@@ -57,12 +57,7 @@ Item PriceAPI::FindItem(string id)
 	}
 	else
 	{
-		/*
-		_priceData[id] = CreateItem(id); // Insert?
-		Item i = _priceData[id];
-		FetchItem(id);
-		*/
-		_gw->Toast("PriceCheck", "Unable to find price info for item.", "pricecheck_logo", 3.5f, ToastType_Warning);
+		//_gw->Toast("PriceCheck", "Unable to find price info for item.", "pricecheck_logo", 3.5f, ToastType_Warning);
 		_priceData[id] = Item();
 		return _priceData[id];
 	}
@@ -84,7 +79,7 @@ Item PriceAPI::FindBlueprint(string id)
 	}
 	else 
 	{
-		_gw->Toast("PriceCheck", "Can't find price info for blueprint: " + id );
+		//_gw->Toast("PriceCheck", "Can't find price info for blueprint: " + id );
 		_blueprintData[id] = Item();
 		return _blueprintData[id];
 	}

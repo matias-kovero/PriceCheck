@@ -1,175 +1,248 @@
 #include "pch.h"
 #include "TradeIn.h"
+#include "gui/GUITools.h"
+#include "gui/Fonts.h"
 
-TradeIn::TradeIn()
-{
-}
+TradeIn::TradeIn(){}
 
-TradeIn::~TradeIn()
-{
-	// If we have dynamically allocated memory "new" or pointers delete them here.
-	// This must be done to avoid memory leaks.
-}
+TradeIn::~TradeIn(){}
 
 void TradeIn::AddItem(TradeItem item)
 {
+	// Set the quality of the trade in
+	if (items.size() < 1) quality = item.GetQuality() + 1;
+
 	PaintPrice price = item.GetPrice();
 	value.min += price.min;
 	value.max += price.max;
-	items.push_back({
-		price.min,
-		price.max,
-		item.GetLongLabel().ToString(),
-		item.GetPaint(),
-		item.GetPaintColor(),
-		item.GetSeries()
-	});
+
+	int seriesId = item.IsBlueprint() ? item.GetBlueprintSeriesID() : item.GetSeriesID();
+	/*
+	* int min = 0;
+	* int max = 0;
+	* int series = 0;
+	* string label = "";
+	* string paintLabel = "";
+	* COLOR paint = COLOR();
+	*/
+	items.push_back(
+		{
+			price.min,
+			price.max,
+			seriesId,
+			item.GetLongLabel().ToString(),
+			item.GetPaint(),
+			item.GetPaintColor()
+		}
+	);
+
+	// Update our series info to show outcome
+	series = UpdateSeries(seriesId);
+
+	// Update our render cache
+	CalculateRenderInfo();
 }
 
 void TradeIn::Clear()
 {
-	value = TradeInValue();
+	/* Reset values to default */
+	value = Value();
   items.clear();
+	series.clear();
+	quality = 0;
+	/* Set render stuff to default */
+	renderWidth = 250.f;
+	additionalHeight = 0.f;
 }
 
-void TradeIn::Render(CanvasWrapper canvas, Vector2 screenSize, Vector2F pos, bool useAvg)
+void TradeIn::Render(Fonts fonts, bool show)
 {
-	int box_padding = 5; // Paddings around the box sides.
-	int category_padding = 5; // Padding between displayed info (name, paint, value)
-	Format rf = CalculateLongestString(canvas, box_padding);
+	ImVec2 box_size = { renderWidth, 100.f + additionalHeight + (items.size() + series.size()) * ImGui::GetTextLineHeight() * 1.25f + 16.f }; // This should change with code?
 
-	int box_width = rf.width > 250 ? rf.width : 250, box_height = 50 + (items.size() * 15 * 2) + (box_padding * 2);
-	// Position box to screen.
-	Vector2F normPos = {
-		(pos.X + 1.0) * (screenSize.X * 0.5 - box_width / 2),
-		(-pos.Y + 1.0) * (screenSize.Y * 0.5 - box_height / 2)
-	};
-	Vector2 givePos = { (int)normPos.X, (int)normPos.Y };
+	ImGui::SetNextWindowSize(box_size); // As we dynamically change the size, need to run every frame
 
-	// Where second half Y starts
-	int sHalf = givePos.Y + 40 + (int)(items.size() * 15);
+	// Yeet out for optimization
+	if (!ImGui::Begin(menuName.c_str(), &show,
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize )) // | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs))
+	{
+		// Early out
+		return;
+	}
 
-	// Draw Box - give the ability to change alpha?
-	canvas.SetColor(6, 23, 35, 230);
-	canvas.SetPosition(givePos);
-	canvas.FillBox(Vector2{ box_width, box_height });
+	float padding = 8.f;
+	// Check fonts, if not cached - cache them.
+	if (!fontTitle) fontTitle = fonts.GetFont("RLHeadI");
+	if (!fontText) fontText = fonts.GetFont("default");
 
-	string tMin = std::to_string(value.min);
-	string tMax = std::to_string(value.max);
+	// Start rendering content
+	GUITools::BoxShadow(ImGui::GetWindowPos(), ImGui::GetWindowSize(), 1.1f, true);
 
-	int tSum = (value.min + value.max) / 2;
+	// Header
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { padding, padding });
+	ImGui::BeginChildFrame(10001, { 0.f, 35.f }, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs);
+	ImGui::PushFont(fontTitle);
+	ImGui::Text("TRADE IN");
+	GUITools::AlignRight(std::to_string(value.min) + " - " + std::to_string(value.max), ImGui::GetWindowContentRegionMax().x);
+	ImGui::PopFont();
+	ImGui::EndChildFrame();
 
-	canvas.SetColor(255, 255, 255, 255);
-	canvas.SetPosition(Vector2{ givePos.X + 5, givePos.Y + 5 });
+	// TradeIn Items
+	fontText->Scale = 1.1f;
+	ImGui::PushFont(fontText);
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(80, 80, 80, 40));
+	ImGui::BeginChild("ItemsBG", { 0, (items.size()) * ImGui::GetTextLineHeight() * 1.25f + padding * 2 });
+	ImGui::PopStyleColor();
+	ImGui::BeginChildFrame(100002, { 0, (items.size()) * ImGui::GetTextLineHeight() * 1.25f + padding * 2 }, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs);
+	RenderItems();
+	ImGui::EndChildFrame();
+	ImGui::EndChild(); // ItemsBG
+	fontText->Scale = 1.f;
+	ImGui::PopFont();
+	
+	ImGui::PopStyleVar(); // FramePadding
+	
+	// Footer
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { padding, 4.f });
+	ImGui::BeginChildFrame(10003, { 0.f, 30.f }, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs);
+	ImGui::PushFont(fontTitle);
+	ImGui::Text("OUTCOME");
+	//GUITools::AlignRight("0 - 90", ImGui::GetWindowContentRegionMax().x);
+	ImGui::PopFont();
+	ImGui::EndChildFrame();
+	ImGui::PopStyleVar();
 
-	if (useAvg)
-		canvas.DrawString("Trade In Value: " + std::to_string(tSum));
-	else
-		canvas.DrawString("Trade In Value: " + tMin + " - " + tMax);
-	int i = 1;
-	// Love the range-based loop, but why no index :(
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { padding, padding });
+	// Outcome Results
+	//fontText->Scale = 1.1f;
+	ImGui::PushFont(fontText);
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(80, 80, 80, 40));
+	ImGui::BeginChild("TradeInResBG", { 0, 0 });
+	ImGui::PopStyleColor();
+	ImGui::BeginChildFrame(100004, { 0, 0 }, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
+	RenderOutcome();
+	ImGui::EndChildFrame();
+	ImGui::EndChild(); // TradeInResBG
+	//fontText->Scale = 1.f;
+	ImGui::PopFont();
+
+	ImGui::EndChildFrame();
+	ImGui::PopStyleVar();
+}
+
+std::vector<TradeIn::Series> TradeIn::UpdateSeries(const int& id)
+{
+	// Check if series contains our series already.
+	auto it = std::find_if(series.begin(), series.end(), [&](Series const& serie) { return serie.id == id; });
+	if (it != series.end())
+	{
+		// Add a new item to this series, later on calculate the chances
+		it->itemCount++;
+	}
+	else {
+		// A new series to this trade in, get the items for this series
+		auto newSeries = itemSeriesDatabase.GetSeriesItems(id);
+		// To add room for series outcome items in render
+		/* DISABLE FOR NOW - Publish on later version
+		additionalHeight += std::count_if
+		(
+			newSeries.items.begin(), 
+			newSeries.items.end(), 
+			[=](ItemSeriesDatabaseWrapper::SeriesItem i) { return  i.quality == quality; }
+		) * 17; // Currently not tied to font size!
+		*/
+		series.push_back({ id, 1, newSeries });
+	}
+	// Sort the series by the amount of items in trade aka the chances of getting it
+	std::sort(series.begin(), series.end());
+
+	return series;
+}
+
+void TradeIn::RenderItems()
+{
+	float maxRight = ImGui::GetWindowContentRegionMax().x;
+
 	for (const auto& item : items)
 	{
-		i++;
-		//canvas.SetColor(255, 255, 255, 255);
-		//canvas.SetPosition(Vector2{ givePos.X + 5, givePos.Y + (15*i) });
-		// Draw name
-		canvas.SetColor(113, 148, 242, 255);
-		canvas.SetPosition(Vector2{ givePos.X + box_padding, givePos.Y + (i * 15) });
-		canvas.DrawString(item.name);
-		/* DRAW PAINT */
-		// Background
-		if (item.paint != "")
+		ImGui::TextColored({ ImColor(113, 148, 242, 255) }, "%s", item.label.c_str()); ImGui::SameLine(renderColums.at(1));
+		if (item.paintLabel != "")
 		{
-			canvas.SetColor(item.paintcolor.r, item.paintcolor.g, item.paintcolor.b, 255);
-			canvas.SetPosition(Vector2{
-				(givePos.X + box_padding) + (int)rf.name,
-				givePos.Y + (i * 15) + 1
-				}
-			);
-			canvas.FillBox(Vector2{ (int)rf.paint, 13 });
+			COLOR c = item.paint;
+			ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(c.r, c.g, c.b, c.a));
+			ImGui::SmallButton(" ");
+			ImGui::PopStyleColor();
 		}
-		// Name
-		canvas.SetColor(item.paintcolor.r, item.paintcolor.g, item.paintcolor.b, 255);
-		canvas.SetPosition(Vector2{ (givePos.X + box_padding) + (int)rf.name, givePos.Y + (i * 15) });
-		//canvas.DrawString(item.paint);
-		/* DRAW PRICE */
-		// Max
-		canvas.SetColor(255, 255, 255, 255);
-		canvas.SetPosition(Vector2{
-			(givePos.X + box_width) - box_padding - (int)canvas.GetStringSize(std::to_string(item.max)).X,
-			givePos.Y + i * 15
-			});
-		canvas.DrawString(std::to_string(item.max));
-		// Min
-		canvas.SetColor(255, 255, 255, 255);
-		canvas.SetPosition(Vector2{
-			(givePos.X + box_width) - box_padding - (int)rf.max - (int)canvas.GetStringSize(std::to_string(item.min) + " -").X,
-			givePos.Y + i * 15
-			});
-		canvas.DrawString(std::to_string(item.min) + " -");
-	}
-	// Divider line
-	canvas.SetColor(255, 255, 255, 130);
-	canvas.DrawLine(
-		Vector2{ givePos.X + box_padding, sHalf - 5 },
-		Vector2{ givePos.X + box_width - box_padding, sHalf - 5 }
-	);
-	// Outcome
-	canvas.SetColor(255, 255, 255, 255);
-	canvas.SetPosition(Vector2{ givePos.X + box_padding, sHalf });
-	canvas.DrawString("Outcome:");
-	int s = 1;
-	// Calculate the chances here?
-	auto tally = calculateChances();
-	for (auto const& [key, val] : tally)
-	{
-		s++;
-		int chance = (double)tally[key] / items.size() * 100; // Avoid integer math
-
-		canvas.SetColor(113, 148, 242, 255);
-		canvas.SetPosition(Vector2{ givePos.X + box_padding, sHalf + (s * 15) });
-		canvas.DrawString("(" +
-			// Calculate %
-			std::to_string(chance)
-			+ "%) " + key);
+		else ImGui::Text(" ");
+		ImGui::SameLine(renderColums.at(1));
+		GUITools::AlignRight(std::to_string(item.min), maxRight - renderColums.at(3));
+		GUITools::AlignRight("-", maxRight - renderColums.at(4));
+		GUITools::AlignRight(std::to_string(item.max), maxRight);
 	}
 }
 
-Format TradeIn::CalculateLongestString(CanvasWrapper canvas, int padding)
+void TradeIn::RenderOutcome()
 {
-	Format rf;
-	// Not the best logic, might need optimization - as this is calculated every tick!
+	float maxRight = ImGui::GetWindowContentRegionMax().x;
+	ImColor textColor = { 113, 148, 242, 255 };
+	ImColor testColor = { 250, 64, 64, 255 };
+	for (const auto& s : series)
+	{
+		int chance = (double)s.itemCount / items.size() * 100; // Avoid integer math
+		ImGui::TextColored({ textColor },"%d%% %s", chance, s.data.name.c_str());
+
+		/* DISABLE FOR NOW - Reveal on later version
+		for (auto item : s.data.items)
+		{
+			if (item.quality == quality) 
+			{
+				ImGui::NewLine(); ImGui::SameLine(16.f);
+				ImGui::TextColored({ testColor }, "%s", item.label.c_str());
+				ImGui::SameLine(renderColums.at(1));
+				// Risky on the ITEMPAIN::DEFAULT - store these inside an pop-up, with loop on all paints?
+				GUITools::AlignRight(std::to_string(item.price[ITEMPAINT::DEFAULT].min), maxRight - renderColums.at(3));
+				GUITools::AlignRight("-", maxRight - renderColums.at(4));
+				GUITools::AlignRight(std::to_string(item.price[ITEMPAINT::DEFAULT].max), maxRight);
+			}
+		}
+		*/
+	}
+}
+
+void TradeIn::CalculateRenderInfo()
+{
+	// As we do a bit wonky alignment, we'll need to use some sort of padding between items
+	float pad = 13.f;
+	float name{}, paint{}, min{}, max{};
+	// Loop items, and find longest words of each column
 	for (const auto& item : items)
 	{
-		// canvas.GetStringSize();
-		float i_name = canvas.GetStringSize(item.name).X,
-			i_paint = canvas.GetStringSize(item.paint).X,
-			i_value = canvas.GetStringSize(std::to_string(item.min) + " - " + std::to_string(item.max)).X,
-			i_min = canvas.GetStringSize(std::to_string(item.min)).X,
-			i_max = canvas.GetStringSize(std::to_string(item.max)).X;
+		float i_name = ImGui::CalcTextSize(item.label.c_str()).x,
+			i_paint = ImGui::CalcTextSize(item.paintLabel.c_str()).x,
+			i_min = ImGui::CalcTextSize(std::to_string(item.min).c_str()).x,
+			i_max = ImGui::CalcTextSize(std::to_string(item.max).c_str()).x;
 
-		rf.name = i_name > rf.name ? i_name : rf.name;
-		rf.paint = i_paint > rf.paint ? i_paint : rf.paint;
-		rf.value = i_value > rf.value ? i_value : rf.value;
-		rf.min = i_min > rf.min ? i_min : rf.min;
-		rf.max = i_max > rf.max ? i_max : rf.max;
+		name = i_name > name ? i_name : name;
+		paint = i_paint > paint ? i_paint : paint;
+		min = i_min > min ? i_min : min;
+		max = i_max > max ? i_max : max;
 	}
-	rf.paint = 15; // Forced width of paint rect
-	rf.name += padding, rf.paint += padding, rf.value += padding, rf.min += padding, rf.max += padding;
-	rf.width = rf.name + rf.paint + rf.value + (padding * 5); // Left + Right pad
+	// Temp fix - not using paint names, only a small blib
+	paint = 15.f;
+	// Calc whole window width, adding padding between columns
+	renderWidth = name + paint + min + max + (pad * 6);
 
-	//LOG("{} | {} | {} = {}", rf.name, rf.paint, rf.value, rf.width);
-	return rf;
-}
-
-std::map<string, int> TradeIn::calculateChances()
-{
-	// O(n lg n) => possible O(n) with unordered_map
-	std::map<string, int> count;
-	for (auto x : items)
-		++count[x.series];
-	// count.size() has the unique
-	// count["serie"] has the freq
-	return count;
+	// Min width is 250, check if we are under it.
+	float diff = 250.f - renderWidth;
+	if (diff > 0)
+	{
+		renderWidth = 250.f;
+		name += diff / 1.5f;
+	}
+	// Vector should have these fields - as its initialized on class creation.
+	renderColums[0] = (name + pad);
+	renderColums[1] = (name + paint + (pad * 2));
+	renderColums[2] = (max + min);
+	renderColums[3] = (max + ImGui::CalcTextSize("-").x + 10.f);
+	renderColums[4] = (max + 5.f);
 }

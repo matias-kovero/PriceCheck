@@ -3,11 +3,13 @@
 #include "TradeItem.h"
 #include "bakkesmod/wrappers/items/TradeWrapper.h"
 #include "bakkesmod/wrappers/items/ProductTradeInWrapper.h"
+#include "bakkesmod/wrappers/items/ProductWrapper.h"
 #include "defines.h"
 
 BAKKESMOD_PLUGIN(PriceCheck, "Check item prices.", plugin_version, PLUGINTYPE_FREEPLAY)
 
 std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
+std::shared_ptr<GameWrapper> _globalGameWrapper;
 std::shared_ptr<SpecialEditionDatabaseWrapper> _globalSpecialEditionManager;
 std::shared_ptr<PriceAPI> _globalPriceAPI;
 
@@ -17,24 +19,43 @@ void PriceCheck::registerCvars()
 	*		SET FILE CVARS
 	* ===================
 	*/
-	cvarManager->registerCvar(CVAR_PROVIDER, "1", "Select data provider", false).bindTo(dataProvider);
-	cvarManager->registerCvar(CVAR_DATA_STATUS, " unknown", "Placeholder for data status", false);
+	try 
+	{
+		cvarManager->registerCvar(CVAR_PROVIDER, "1", "Select data provider", false).bindTo(dataProvider);
+		cvarManager->registerCvar(CVAR_DATA_STATUS, " unknown", "Placeholder for data status", false);
 
-	cvarManager->registerCvar(CVAR_USE_AVG, "0", "Use AVG prices", false, true, 0, true, 1).bindTo(useAVG);
-	cvarManager->registerCvar(CVAR_FORCE_SHOW, "0", "Show all UI elements", false, true, 0, true, 1).bindTo(forceShow);
+		auto avg = cvarManager->registerCvar(CVAR_USE_AVG, "0", "Use AVG prices", false, true, 0, true, 1);
+		avg.bindTo(useAVG);
+		avg.addOnValueChanged([this](std::string cvarName, CVarWrapper newCvar)
+			{
+				if (newCvar.IsNull()) return;
+				bool value = newCvar.getBoolValue();
+				playerTrade.useAvg = value;
+				tradeIn.useAvg = value;
+			}
+		);
+		auto force = cvarManager->registerCvar(CVAR_FORCE_SHOW, "0", "Show all UI elements", false, true, 0, true, 1);
+		force.bindTo(forceShow);
+		force.addOnValueChanged([this](std::string cvarName, CVarWrapper newCvar) 
+			{
+				if (newCvar.IsNull()) return;
+				newCvar.getBoolValue() ? StartRender() : StopRender();
+			}
+		);
 
-	cvarManager->registerCvar(CVAR_GIVE_X, "0.8", "Your items info X", false, true, -1.0f, true, 1.0f).bindTo(tradeX);
-	cvarManager->registerCvar(CVAR_GIVE_Y, "0.85", "Your items info Y", false, true, -1.0f, true, 1.0f).bindTo(tradeY);
+		/* DEBUG ITEM SERIES
+		auto seriesInfo = cvarManager->registerCvar("pc_series", "1", "Check series items", true, true, 1);
+		seriesInfo.addOnValueChanged(std::bind(&PriceCheck::checkSeriesItems, this, std::placeholders::_1, std::placeholders::_2));
+		*/
 
-	cvarManager->registerCvar(CVAR_TRADE_IN_X, "0.93", "Your trade in X", false, true, -1.0f, true, 1.0f).bindTo(tradeInX);
-	cvarManager->registerCvar(CVAR_TRADE_IN_Y, "0.93", "Your trade in Y", false, true, -1.0f, true, 1.0f).bindTo(tradeInY);
-	
-	cvarManager->registerCvar(CVAR_WIDTH, "150", "Info Width", false, true, 0, true, 400).bindTo(width);
-	cvarManager->registerCvar(CVAR_HEIGHT, "65", "Info Height", false, true, 0, true, 400).bindTo(height);
-
-	gameWrapper->RegisterDrawable(std::bind(&PriceCheck::Renderer, this, std::placeholders::_1));
-	// Why the hell it won't just work with ""
-	gameWrapper->LoadToastTexture("pricecheck_logo", std::string("./bakkesmod/data/assets/pricecheck_logo.tga"));
+		// Why the hell it won't just work with ""
+		gameWrapper->LoadToastTexture("pricecheck_logo", std::string("./bakkesmod/data/assets/pricecheck_logo.tga"));
+	}
+	catch (std::exception& e)
+	{
+		LOG("Plugin failed to load! Please contact plugin developer");
+		LOG("{}:{}", __FUNCTION__, e.what());
+	}
 }
 
 void PriceCheck::registerHooks()
@@ -53,7 +74,6 @@ void PriceCheck::registerHooks()
 	
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>(HOOK_NEW_ITEM,
 		[this](ActorWrapper caller, void* params, std::string eventName) { 
-			*gettingNewItems = true;
 			getNewOnlineItem(caller, params); 
 		});
 
@@ -81,42 +101,77 @@ void PriceCheck::registerHooks()
 
 	gameWrapper->HookEventWithCallerPost<ProductTradeInWrapper>(HOOK_TRADE_IN_CLOSE,
 		[this](ProductTradeInWrapper caller, void* params, std::string eventName) { tradeInEnded(caller); });
+
+	gameWrapper->HookEventWithCallerPost<ProductTradeInWrapper>(HOOK_TRADE_IN_END,
+		[this](ProductTradeInWrapper caller, void* params, std::string eventName) { tradeInEnded(caller); });
+
+	/* THIS IS NOT WORKING YET - unable to check if blueprint or item
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>(HOOK_INV_OPEN,
+		[this](ActorWrapper caller, void* params, std::string eventName)
+		{
+			showInventory = true;
+		});
+
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>(HOOK_INV_CLOSE,
+		[this](ActorWrapper caller, void* params, std::string eventName)
+		{
+			showInventory = false;
+			hoverItem.Clear();
+		});
+	*/
+	/*
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>(HOOK_INV_HOVER,
+		[this](ActorWrapper caller, void* params, std::string eventName) 
+		{ 
+			hoverItem.OnHover();
+		});
+	*/
+	/*
+	gameWrapper->HookEventWithCallerPost<OnlineProductWrapper>(HOOK_INVENTORY_ITEM,
+		[this](OnlineProductWrapper caller, void* params, std::string eventName) { showInvetoryItem(caller); });
+	*/
+}
+
+void PriceCheck::StartRender()
+{
+	cvarManager->executeCommand("openmenu " + GetMenuName());
+}
+
+void PriceCheck::StopRender()
+{
+	cvarManager->executeCommand("closemenu " + GetMenuName());
 }
 
 void PriceCheck::onLoad()
 {
-	_globalCvarManager = cvarManager;
-	cvarManager->setBind("F8", "togglemenu PriceCheck");
+	try 
+	{
+		_globalCvarManager = cvarManager;
+		_globalGameWrapper = gameWrapper;
 
-	/* ITEM API */
-	api = std::make_shared<PriceAPI>(cvarManager, gameWrapper);
-	_globalPriceAPI = api;
-	// Should we use api or _globalPriceAPI?
-	api->LoadData();
+		/* ITEM API */
+		api = std::make_shared<PriceAPI>(cvarManager, gameWrapper);
+		_globalPriceAPI = api;
+		api->LoadData();
 
-	// Values to keep track on actions
-	gettingNewItems = std::make_shared<bool>(false);
+		/* SET FILE PARAMS */
+		dataProvider = std::make_shared<string>();
+		useAVG = std::make_shared<bool>(false);
+		forceShow = std::make_shared<bool>(false);
 
-	/* SET FILE PARAMS */
-	dataProvider = std::make_shared<string>();
-	useAVG = std::make_shared<bool>(false);
-	forceShow = std::make_shared<bool>(false);
+		/* MISC STUFF */
+		registerHooks();
+		registerCvars();
 
-	tradeX = std::make_shared<float>(true);
-	tradeY = std::make_shared<float>(true);
-	tradeInX = std::make_shared<float>(true);
-	tradeInY = std::make_shared<float>(true);
-
-	width = std::make_shared<int>(true);
-	height = std::make_shared<int>(true);
-
-	/* MISC STUFF */
-	registerHooks();
-	registerCvars();
-
-	/* FOR TRADEITEMS */ // Is this NONO? check TradeItem.cpp -> updateItemInfo()
-	SpecialEditionDatabaseWrapper sedb = gameWrapper->GetItemsWrapper().GetSpecialEditionDB();
-	_globalSpecialEditionManager = std::make_shared<SpecialEditionDatabaseWrapper>(sedb);
+		/* FOR TRADEITEMS */ // Is this NONO? check TradeItem.cpp -> updateItemInfo()
+		SpecialEditionDatabaseWrapper sedb = gameWrapper->GetItemsWrapper().GetSpecialEditionDB();
+		_globalSpecialEditionManager = std::make_shared<SpecialEditionDatabaseWrapper>(sedb);
+	}
+	catch (std::exception& e)
+	{
+		LOG("Plugin failed to load! Please contact plugin developer");
+		LOG("{}:{}", __FUNCTION__, e.what());
+	}
 }
 
 void PriceCheck::onUnload()
@@ -132,7 +187,8 @@ void PriceCheck::tradeStart(TradeWrapper trade)
 		LOG("{}: Trade is null", __FUNCTION__);
 		return;
 	}
-	showTrade = true;
+	StartRender();
+	guiState.showTrade = true;
 	// Should be empty but double checking
 	playerTrade.Clear();
 }
@@ -144,7 +200,8 @@ void PriceCheck::tradeEnd(TradeWrapper trade)
 		LOG("{}: Trade is null", __FUNCTION__);
 		return;
 	}
-	showTrade = false;
+	StopRender();
+	guiState.showTrade = false;
 	playerTrade.Clear();
 }
 
@@ -214,6 +271,13 @@ void PriceCheck::getNewOnlineItem(ActorWrapper wrap, void* params)
 	// New Item: Retrogression
 	// New Item: Very Rare Drop
 	// New Item: Peregrine TT: Crisis Blueprint
+	// 
+	// GOT 2 DROPS: [5303, 5979] -> [5979, 5303] | Notifications were right
+	// ID: 5303, Series: 1120, Quality: 3, Container: true, Blueprint: false, UnlockMethod: 1, Slot: 11, SortLabel: Very Rare Drop
+	// Should add: 18050945811, itemDrops: {18050945811}
+	// ID: 5979, Series: 1299, Quality: 8, Container: false, Blueprint: false, UnlockMethod: 1, Slot: 0, SortLabel: Tyranno GXT
+	// Should add: 18050945812, itemDrops: {18050945812, 18050945811}
+	// 
 	// Maybe its highest quality, then smallest ID
 	// Seems its using LIFO when displaying over 1 drops
 	// Could we use map -> <ID, InstanceID>
@@ -223,11 +287,11 @@ void PriceCheck::getNewOnlineItem(ActorWrapper wrap, void* params)
 
 void PriceCheck::showNewOnlineItem(ActorWrapper wrap, int count)
 {
-	LOG("Drops: {}, caller: {}", itemDrops.size(), count);
+	// LOG("Drops: {}, caller: {}", itemDrops.size(), count);
 
 	if (!itemDrops.empty() && itemDrops.size() >= count)
 	{
-		LOG("Drops amount: {}", itemDrops.size());
+		// LOG("Drops amount: {}", itemDrops.size());
 		unsigned long long id = itemDrops.front();
 		TradeItem i = gameWrapper->GetItemsWrapper().GetOnlineProduct(id);
 		if (!i) 
@@ -239,8 +303,8 @@ void PriceCheck::showNewOnlineItem(ActorWrapper wrap, int count)
 		PaintPrice price = i.GetPrice();
 		string paint = i.GetPaint();
 
-		LOG("IsContainer: {}", i.GetProduct().IsContainer());
-		LOG("AssetPath: {}", i.GetProduct().GetThumbnailAssetPath().ToString());
+		// LOG("IsContainer: {}", i.GetProduct().IsContainer());
+		// LOG("AssetPath: {}", i.GetProduct().GetThumbnailAssetPath().ToString());
 		// AssetPath: Wheel_Hanzawa_T.Wheel_Hanzawa_T
 		gameWrapper->Toast(
 			"New Item",
@@ -252,7 +316,7 @@ void PriceCheck::showNewOnlineItem(ActorWrapper wrap, int count)
 		itemDrops.pop_front();
 	}
 	else {
-		LOG("{}: Drops seem empty", __FUNCTION__);
+		// LOG("{}: Drops seem empty", __FUNCTION__);
 	}
 }
 
@@ -271,10 +335,12 @@ void PriceCheck::checkPrices(ProductTradeInWrapper wrap)
 	ArrayWrapper<OnlineProductWrapper> items = wrap.GetProducts();
 	if (items.IsNull()) 
 	{
-		showTradeIn = false;
+		guiState.showTradeIn = false;
+		StopRender();
 		return;
 	}
-	showTradeIn = items.Count() > 0 ? true : false;
+	guiState.showTradeIn = items.Count() > 0 ? true : false;
+	if (guiState.showTradeIn) StartRender();
 	// As we will loop old items as well, clear the existing list.
 	tradeIn.Clear();
 
@@ -283,42 +349,47 @@ void PriceCheck::checkPrices(ProductTradeInWrapper wrap)
 
 void PriceCheck::tradeInEnded(ProductTradeInWrapper wrap)
 {
-	showTradeIn = false;
+	StopRender();
+	//showTradeIn = false;
+	guiState.showTradeIn = false;
 	tradeIn.Clear();
 }
 
-void PriceCheck::Renderer(CanvasWrapper canvas)
+/* USED TO DEBUG ITEM SERIES
+void PriceCheck::checkSeriesItems(string cvarName, CVarWrapper newCvar)
 {
-	if (*forceShow)
+	if (newCvar.IsNull() || cvarName.empty()) return;
+	int seriesId = newCvar.getIntValue();
+	auto name = itemSeriesDatabaseWrapper.ToSeriesString(seriesId);
+	auto items = itemSeriesDatabaseWrapper.SeriesToItems(seriesId);
+	LOG("{} has {} items.", name, items.size());
+	ItemsWrapper iw = gameWrapper->GetItemsWrapper();
+
+	for (const auto& item : items)
 	{
-		Vector2 screenSize = gameWrapper->GetScreenSize();
-		RenderTrade(canvas);
-		tradeIn.Render(canvas, screenSize, Vector2F{ *tradeInX, *tradeInY }, *useAVG);
+		auto p = iw.GetProduct(item);
+		auto i = api->FindItem(item).data[ITEMPAINT::DEFAULT];
+		LOG("{} | {} [{}-{}]", itemSeriesDatabaseWrapper.QualityToString(p.GetQuality()), p.GetLongLabel().ToString(), i.min, i.max);
 	}
-	else if (showTrade)
+}
+*/
+
+void PriceCheck::showInvetoryItem(OnlineProductWrapper wrap)
+{
+	if (wrap.IsNull())
 	{
-		RenderTrade(canvas);
-	} 
-	else if (showTradeIn)
+		LOG("{}: Wrapper is null", __FUNCTION__);
+		return;
+	}
+	
+	if (hoverItem.hover)
 	{
-		Vector2 screenSize = gameWrapper->GetScreenSize();
-		tradeIn.Render(canvas, screenSize, Vector2F{ *tradeInX, *tradeInY }, *useAVG);
+		// Double check if visible
+		showInventory = true;
+		// Set hover to false, to only get the 1st item
+		hoverItem.hover = false;
+		// Show info to user
+		hoverItem.HandleItem(wrap);
 	}
 }
 
-void PriceCheck::RenderTrade(CanvasWrapper canvas)
-{
-	Vector2 screenSize = gameWrapper->GetScreenSize();
-
-	Vector2F normPos = {
-		(*tradeX + 1.0) * (screenSize.X * 0.5 - *width / 2),
-		(-*tradeY + 1.0) * (screenSize.Y * 0.5 - *height / 2)
-	};
-
-	playerTrade.Render(
-		canvas,
-		Vector2{ (int)normPos.X, (int)normPos.Y },
-		Vector2{ (int)*width, (int)*height },
-		*useAVG
-	);
-}

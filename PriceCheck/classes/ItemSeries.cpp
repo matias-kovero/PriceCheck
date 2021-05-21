@@ -1,102 +1,7 @@
 #include "pch.h"
-#include "TradeItem.h"
+#include "ItemSeries.h"
 
-PaintPrice TradeItem::GetPrice()
-{
-  Item price = this->IsBlueprint() ?
-    _globalPriceAPI->FindBlueprint(m_info.id) :
-    _globalPriceAPI->FindItem(this->GetProductID());
-  //LOG("ID: {} - {}", this->GetProductID(), price.id);
-  // OEM - VeryRare: 376;
-  for (auto const& [key, val] : price.data)
-  {
-    //LOG("{}: ({}-{})", PaintToString(key), val.min, val.max);
-  }
-  return price.data[m_info.paint];
-}
-
-string TradeItem::GetPaint()
-{
-  return PaintToString(m_info.paint);
-}
-
-COLOR TradeItem::GetPaintColor()
-{
-  return PaintToRGB(m_info.paint);
-}
-
-COLOR TradeItem::GetQualityColor()
-{
-  return QualityToRGB(this->GetQuality());
-}
-
-string TradeItem::GetSeries()
-{
-  try 
-  {
-    int id = this->IsBlueprint() ?
-      this->GetBlueprintSeriesID() :
-      this->GetSeriesID();
-    string name = ToSeriesString(id);
-    return name;
-  }
-  catch (std::exception& e) 
-  {
-    LOG("Exception in {}: {}", __FUNCTION__, e.what());
-    return "";
-  }
-}
-
-Info TradeItem::updateItemInfo()
-{
-  auto att = this->GetAttributes();
-  for (int i = 0; i < att.Count(); i++)
-  {
-    if (att.Get(i).GetAttributeType() == "ProductAttribute_TitleID_TA")
-    {
-      // Not implemented. Skip for now.
-    }
-    if (att.Get(i).GetAttributeType() == "ProductAttribute_Blueprint_TA")
-    {
-      auto pa = ProductAttribute_BlueprintWrapper(att.Get(i).memory_address);
-      m_info.id = pa.GetProductID(); // Get the manufactured products id. Used to get price info.
-    }
-    if (att.Get(i).GetAttributeType() == "ProductAttribute_Quality_TA")
-    {
-      // No usage yet
-      /*
-      auto pa = ProductAttribute_QualityWrapper(att.Get(i).memory_address);
-      info.quality = pa.GetQuality();
-      */
-    }
-    if (att.Get(i).GetAttributeType() == "ProductAttribute_Painted_TA") // Painted
-    {
-      auto pa = ProductAttribute_PaintedWrapper(att.Get(i).memory_address);
-      m_info.paint = static_cast<ITEMPAINT>(pa.GetPaintID());
-    }
-    if (att.Get(i).GetAttributeType() == "ProductAttribute_Certified_TA") // Certified
-    {
-      // No usage yet
-      /*
-      auto pa = ProductAttribute_CertifiedWrapper(att.Get(i).memory_address);
-      info.certified = pa.GetRankLabel().ToString();
-      */
-    }
-    if (att.Get(i).GetAttributeType() == "ProductAttribute_SpecialEdition_TA") // Special Editions
-    {
-      // No usage yet
-      /*
-      auto pa = ProductAttribute_SpecialEditionWrapper(att.Get(i).memory_address);
-      auto label = _globalSpecialEditionManager->GetSpecialEditionName(pa.GetEditionID());
-      label.replace(0, 8, ""); // Removing "Edition_" from label.
-      info.specialEdition = label;
-      */
-    }
-  }
-  return m_info;
-}
-
-string TradeItem::ToSeriesString(const int& id)
+string ItemSeriesDatabaseWrapper::ToSeriesString(const int& id)
 {
   // Thanks to ItsBranK for providing data
   static std::unordered_map<int, string> series
@@ -150,12 +55,24 @@ string TradeItem::ToSeriesString(const int& id)
   {
     return it->second + " Series";
   }
-  throw std::invalid_argument("Unkown series: " + std::to_string(id));
+  return "Unknown series";
 }
 
 // Raw API data from ItsBranK, then used parser
 // https://github.com/matias-kovero/RLParseRawAPIData
-std::vector<int> TradeItem::SeriesToItems(const int& id)
+/*
+* Special series:
+*  931: Black Market Drop         (Capsule)
+*  932: Exotic Drop               (Capsule)
+*  933: Import Drop               (Capsule)
+*  934: Rare Drop                 (Capsule)
+*  935: Uncommon Drop             (Capsule)
+*  936: Very Rare Drop            (Capsule)
+* 1205: Season 3 Prospects Cup    (Tournament)
+* 1206: Season 3 Challengers Cup  (Tournament)
+* 1207: Season 3 All-Stars Cup    (Tournament)
+*/
+std::vector<int> ItemSeriesDatabaseWrapper::SeriesToItems(const int& id)
 {
   static std::unordered_map<int, std::vector<int>> seriesItems
   {
@@ -220,4 +137,72 @@ std::vector<int> TradeItem::SeriesToItems(const int& id)
   }
   // Just return empty if can't find
   return std::vector<int>{};
+}
+
+string ItemSeriesDatabaseWrapper::QualityToString(const int& quality)
+{
+  switch (quality)
+  {
+  case 0:
+    return "Unknown";
+  case 1:
+    return "Uncommon"; // Uncommon
+  case 2:
+    return "Rare";
+  case 3:
+    return "Very Rare";
+  case 4:
+    return "Import";
+  case 5:
+    return "Exotic";
+  case 6:
+    return "Black Market";
+  case 7:
+    return "Unkown";
+  case 8:
+    return "Limited";
+  }
+  return "???";
+}
+
+ItemSeriesDatabaseWrapper::Series ItemSeriesDatabaseWrapper::GetSeriesItems(const int& id)
+{
+  auto it = cache.find(id);
+  if (it != cache.end())
+  {
+    // Stuff was in cache!
+    return it->second;
+  }
+  else
+  {
+    // Not found in cache, get items from PriceAPI
+    // Warning!! We are forcing data to cache slot id
+    cache[id] = FillSeries(id);
+    return cache[id];
+  }
+}
+
+ItemSeriesDatabaseWrapper::Series ItemSeriesDatabaseWrapper::FillSeries(const int& id)
+{
+  Series sd = Series();
+  sd.id = id;
+  sd.name = ToSeriesString(id);
+
+  auto seriesItems = SeriesToItems(id);
+  auto pw = _globalGameWrapper->GetItemsWrapper();
+
+  for (const auto& itemId : seriesItems)
+  {
+    // This could be also blueprints!!
+    auto p = pw.GetProduct(itemId);
+    auto price = _globalPriceAPI->FindItem(itemId).data;
+    // string, int, std::map<ITEMPAINT, PaintPrice>
+    sd.items.push_back({
+      p.GetLongLabel().ToString(),
+      p.GetQuality(),
+      price
+      });
+  }
+  LOG("Found: {}({}) with {} items.", sd.name, sd.id, seriesItems.size());
+  return sd;
 }
